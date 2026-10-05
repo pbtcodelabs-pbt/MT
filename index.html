@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi Meter Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#7c3aed">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial Black', 'Arial Bold', Arial, sans-serif; }
+
+  :root{
+    --bg1:#f5f3ff; --bg2:#ede9fe; --bg3:#fae8ff;
+    --text-primary:#3b0764; --text-secondary:#7c3aed;
+    --card-bg:rgba(255,255,255,0.55); --card-border:rgba(124,58,237,0.25);
+    --row-bg:rgba(255,255,255,0.55); --row-border:rgba(124,58,237,0.2);
+    --input-bg:rgba(255,255,255,0.7); --input-border:rgba(124,58,237,0.35);
+    --info-bg:rgba(255,255,255,0.6); --muted:#8b5cf6;
+    --theme-a:#7c3aed; --theme-b:#ec4899; --theme-c:#f59e0b; --theme-d:#06b6d4;
+  }
+  body.theme-sky{
+    --bg1:#eff6ff; --bg2:#e0f2fe; --bg3:#f0f9ff;
+    --text-primary:#0c4a6e; --text-secondary:#0369a1;
+    --card-bg:rgba(255,255,255,0.55); --card-border:rgba(3,105,161,0.25);
+    --row-bg:rgba(255,255,255,0.55); --row-border:rgba(3,105,161,0.2);
+    --input-bg:rgba(255,255,255,0.7); --input-border:rgba(3,105,161,0.35);
+    --info-bg:rgba(255,255,255,0.6); --muted:#0284c7;
+  }
+  body.theme-mint{
+    --bg1:#ecfdf5; --bg2:#d1fae5; --bg3:#f0fdfa;
+    --text-primary:#064e3b; --text-secondary:#047857;
+    --card-bg:rgba(255,255,255,0.55); --card-border:rgba(4,120,87,0.25);
+    --row-bg:rgba(255,255,255,0.55); --row-border:rgba(4,120,87,0.2);
+    --input-bg:rgba(255,255,255,0.7); --input-border:rgba(4,120,87,0.35);
+    --info-bg:rgba(255,255,255,0.6); --muted:#059669;
+  }
+  body.theme-peach{
+    --bg1:#fff7ed; --bg2:#ffedd5; --bg3:#fef3c7;
+    --text-primary:#7c2d12; --text-secondary:#c2410c;
+    --card-bg:rgba(255,255,255,0.55); --card-border:rgba(194,65,12,0.25);
+    --row-bg:rgba(255,255,255,0.55); --row-border:rgba(194,65,12,0.2);
+    --input-bg:rgba(255,255,255,0.7); --input-border:rgba(194,65,12,0.35);
+    --info-bg:rgba(255,255,255,0.6); --muted:#ea580c;
+  }
+
+  body {
+    background: linear-gradient(135deg, var(--bg1), var(--bg2), var(--bg3));
+    background-attachment: fixed;
+    min-height: 100vh;
+    padding: 15px;
+    transition: background 0.4s;
+  }
+
+  .container { max-width: 600px; margin: auto; }
+
+  .theme-picker {
+    display: flex; gap: 8px; justify-content: center; margin-bottom: 6px;
+  }
+  .theme-dot {
+    width: 30px; height: 30px; border-radius: 50%;
+    cursor: pointer; border: 3px solid rgba(255,255,255,0.7);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: transform 0.2s;
+  }
+  .theme-dot:hover { transform: scale(1.12); }
+  .theme-dot.active { border-color: #1f2937; transform: scale(1.15); }
+  .theme-dot.lavender { background: linear-gradient(135deg,#c4b5fd,#f0abfc); }
+  .theme-dot.sky { background: linear-gradient(135deg,#7dd3fc,#bae6fd); }
+  .theme-dot.mint { background: linear-gradient(135deg,#6ee7b7,#a7f3d0); }
+  .theme-dot.peach { background: linear-gradient(135deg,#fdba74,#fed7aa); }
+
+  .header { text-align: center; padding: 15px 10px 15px; }
+  .header h1 { color: var(--text-primary); font-size: 25px; letter-spacing: 0.5px; }
+  .header p { color: var(--text-secondary); font-size: 12px; margin-top: 4px; }
+
+  .card {
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--card-border);
+    padding: 20px; border-radius: 16px; margin-top: 10px;
+  }
+  .card h3 { color: var(--text-primary); font-size: 17px; margin-bottom: 14px; }
+
+  input {
+    width: 100%; padding: 11px 14px; margin: 5px 0; border-radius: 10px;
+    border: 1px solid var(--input-border); background: var(--input-bg);
+    color: var(--text-primary); font-size: 13px; outline: none; transition: border 0.3s;
+  }
+  input::placeholder { color: var(--muted); opacity: 0.7; font-family: Arial, sans-serif; font-weight: normal; }
+  input:focus { border-color: var(--theme-a); }
+
+  .btn-add {
+    width: 100%; padding: 12px; margin-top: 10px;
+    background: linear-gradient(90deg, var(--theme-a), var(--theme-b));
+    color: #fff; border: none; border-radius: 10px; font-size: 14px;
+    cursor: pointer; box-shadow: 0 4px 15px rgba(124,58,237,0.3);
+    transition: transform 0.2s;
+  }
+  .btn-add:hover { transform: translateY(-2px); }
+
+  .btn-add-toggle {
+    width: 100%; padding: 14px; margin-top: 10px;
+    background: linear-gradient(90deg, var(--theme-a), var(--theme-b));
+    color: #fff; border: none; border-radius: 12px; font-size: 14px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 4px 15px rgba(124,58,237,0.3); transition: transform 0.2s;
+  }
+  .btn-add-toggle:hover { transform: translateY(-2px); }
+  .btn-add-toggle .plus-icon { font-size: 18px; line-height: 1; display: inline-block; transition: transform 0.25s; }
+  .btn-add-toggle.open .plus-icon { transform: rotate(45deg); }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+  .btn-row .btn-add-toggle, .btn-row .btn-secondary { margin-top: 0; flex: 1; }
+  .btn-secondary {
+    padding: 14px; background: var(--card-bg); color: var(--text-primary);
+    border: 1px solid var(--card-border); border-radius: 12px; font-size: 13px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: transform 0.2s;
+  }
+  .btn-secondary:hover { transform: translateY(-1px); }
+
+  .ref-row {
+    background: var(--row-bg); backdrop-filter: blur(10px);
+    border: 1px solid var(--row-border); border-radius: 12px; margin-top: 10px;
+    overflow: hidden; transition: border-color 0.3s;
+  }
+
+  .ref-header {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 14px 16px; cursor: pointer; position: relative;
+  }
+  .ref-header::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--theme-a), var(--theme-b), var(--theme-c));
+    border-radius: 12px 12px 0 0;
+  }
+
+  .ref-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .ref-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+  .ref-info { min-width: 0; flex: 1 1 auto; overflow: hidden; }
+  .ref-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--theme-a), var(--theme-b));
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .ref-icon.icon-warn { background: linear-gradient(135deg, #d97706, #f59e0b); }
+  .ref-icon.icon-over { background: linear-gradient(135deg, #be123c, #e11d48); }
+  .ref-label { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
+  .ref-number {
+    font-size: 14px; color: var(--text-primary); margin-top: 1px;
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ref-name-inline { font-size: 14px; color: var(--text-primary); margin-right: 8px; }
+  .chevron { color: var(--text-secondary); font-size: 16px; transition: transform 0.3s; flex-shrink: 0; }
+  .ref-row.open .chevron { transform: rotate(180deg); }
+
+  /* ===== Compact, aligned stat grid (Quota / Used / Remaining / Bill) ===== */
+  .ref-badges-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  }
+  @media (max-width: 380px) { .ref-badges-grid { grid-template-columns: repeat(2, 1fr); } }
+  .mini-stat {
+    background: var(--info-bg); border: 1px solid var(--row-border); border-radius: 10px;
+    padding: 6px 4px 7px; text-align: center; min-width: 0;
+  }
+  .mini-stat .ms-label {
+    font-size: 8.5px; color: var(--muted); letter-spacing: 0.3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mini-stat .ms-value { font-size: 16px; font-weight: bold; color: var(--text-primary); margin-top: 2px; line-height: 1.1; }
+  .mini-stat.ms-used .ms-value { color: #b91c1c; }
+  .mini-stat.ms-remain .ms-value { color: #047857; }
+  .mini-stat.ms-warn .ms-value { color: #b45309; }
+  .mini-stat.ms-over .ms-value { color: #be123c; }
+  .mini-stat.ms-bill .ms-value { color: #b45309; }
+
+  .meter-detail { display: none; padding: 0 16px 16px; border-top: 1px solid var(--row-border); }
+  .ref-row.open .meter-detail { display: block; }
+
+  .meter-info { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0; }
+  .info-item {
+    background: var(--info-bg); border-radius: 8px; padding: 7px 10px;
+    font-size: 10.5px; color: var(--text-secondary); cursor: pointer; transition: background 0.2s;
+  }
+  .info-item span { display: block; font-size: 12px; color: var(--text-primary); margin-top: 2px; }
+
+  /* ===== Trend panel — its own bordered card so it reads as one designed block ===== */
+  .ref-trend-row { padding: 0 16px 14px; margin-top: -2px; }
+  .ref-trend-panel {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(236,72,153,0.08));
+    border: 1px solid rgba(124,58,237,0.18); border-radius: 12px; padding: 8px;
+  }
+  .ref-trend-panel.over { background: linear-gradient(135deg, rgba(220,38,38,0.10), rgba(220,38,38,0.06)); border-color: rgba(220,38,38,0.25); }
+  .trend-chip { text-align: center; padding: 3px 2px; min-width: 0; }
+  .trend-chip .tc-label { font-size: 8.5px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trend-chip .tc-value { font-size: 14px; font-weight: bold; color: var(--text-primary); margin-top: 2px; }
+  .ref-trend-panel.over .tc-value { color: #b91c1c; }
+  .trend-chip.tc-span2 { grid-column: span 2; border-top: 1px dashed rgba(124,58,237,0.2); padding-top: 6px; margin-top: 2px; }
+  .ref-trend-panel.over .trend-chip.tc-span2 { border-top-color: rgba(220,38,38,0.25); }
+
+  /* ===== Settings (collapsible) ===== */
+  .settings-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 14px; padding: 10px 12px; background: var(--info-bg);
+    border: 1px solid var(--card-border); border-radius: 10px; cursor: pointer;
+    font-size: 12px; color: var(--text-secondary);
+  }
+  .settings-chevron { transition: transform 0.3s; }
+  .settings-chevron.open { transform: rotate(180deg); }
+  .settings-body { display: none; margin-top: 8px; }
+  .settings-body.open { display: block; }
+
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+  .stat-box { border-radius: 10px; padding: 10px; text-align: center; }
+  .stat-used { background: linear-gradient(135deg, #ede9fe, #ddd6fe); border: 1px solid #a78bfa; }
+  .stat-remain { background: linear-gradient(135deg, #d1fae5, #a7f3d0); border: 1px solid #34d399; }
+  .stat-warn { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #f59e0b; }
+  .stat-over { background: linear-gradient(135deg, #fecaca, #fca5a5); border: 1px solid #ef4444; }
+  .stat-bill { grid-column: 1 / -1; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #f59e0b; }
+  .stat-box .label { font-size: 10px; color: #57534e; }
+  .stat-box .value { font-size: 18px; color: #1c1917; margin-top: 2px; }
+
+  .quota-bar-wrap { margin: 8px 0 4px; background: rgba(0,0,0,0.08); border-radius: 20px; height: 10px; overflow: hidden; }
+  .quota-bar-fill { height: 100%; border-radius: 20px; background: linear-gradient(90deg, #059669, #10b981); transition: width 0.3s; }
+  .quota-bar-fill.warn { background: linear-gradient(90deg, #d97706, #f59e0b); }
+  .quota-bar-fill.over { background: linear-gradient(90deg, #dc2626, #ef4444); }
+  .quota-bar-label { font-size: 10px; color: var(--text-secondary); text-align: right; }
+
+  .history-toggle {
+    width: 100%; padding: 10px; margin-top: 10px; background: var(--info-bg);
+    color: var(--text-primary); border: 1px solid var(--card-border); border-radius: 10px;
+    font-size: 12px; cursor: pointer;
+  }
+  .history-list { display: none; max-height: 180px; overflow-y: auto; margin-top: 8px; border-radius: 10px; background: var(--info-bg); }
+  .history-list.open { display: block; }
+  .history-item { display: flex; justify-content: space-between; padding: 8px 12px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--row-border); }
+  .history-item .h-reading { color: var(--text-primary); }
+  .history-empty { padding: 10px 12px; font-size: 11px; color: var(--muted); text-align: center; }
+
+  .readings-table-wrap { margin-top: 10px; border-radius: 10px; overflow: hidden; background: var(--info-bg); border: 1px solid var(--row-border); }
+  .readings-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .readings-table th { background: linear-gradient(90deg, var(--theme-a), var(--theme-b)); color: #fff; padding: 7px 5px; font-size: 9.5px; text-align: center; }
+  .readings-table td { padding: 7px 5px; text-align: center; color: var(--text-primary); border-bottom: 1px solid var(--row-border); }
+  .rt-actions { display: flex; gap: 8px; justify-content: center; }
+  .rt-edit, .rt-del { cursor: pointer; font-size: 12px; }
+  .readings-table tbody tr:last-child td { border-bottom: none; }
+  .readings-summary { padding: 4px 0; }
+  .rs-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; font-size: 12px; color: var(--text-primary); border-top: 1px solid var(--row-border); }
+  .rs-row span:first-child { color: var(--text-secondary); font-size: 11px; }
+  .rs-row span:last-child { font-size: 13px; }
+  .rs-row.over span:last-child { color: #b91c1c; }
+  .last-reading-chk { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-secondary); margin-top: 9px; padding: 8px 10px; background: var(--info-bg); border-radius: 8px; }
+  .last-reading-chk input { width: auto; margin: 0; }
+
+  .records-list { display: none; max-height: 220px; overflow-y: auto; margin-top: 8px; border-radius: 10px; background: var(--info-bg); }
+  .records-list.open { display: block; }
+  .record-item { padding: 10px 12px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--row-border); }
+  .record-item .rec-top { display: flex; justify-content: space-between; color: var(--text-primary); margin-bottom: 3px; }
+  .record-item .rec-bill { color: #b45309; }
+  .record-item .rec-sub { color: var(--muted); font-size: 10px; }
+
+  .status-ok { background: linear-gradient(90deg, #a7f3d0, #6ee7b7); color: #064e3b; border-radius: 8px; padding: 8px 12px; font-size: 12px; text-align: center; margin-top: 6px; }
+  .status-warn { background: linear-gradient(90deg, #fde68a, #fcd34d); color: #78350f; border-radius: 8px; padding: 8px 12px; font-size: 12px; text-align: center; margin-top: 6px; }
+  .status-over { background: linear-gradient(90deg, #fca5a5, #f87171); color: #7f1d1d; border-radius: 8px; padding: 8px 12px; font-size: 12px; text-align: center; margin-top: 6px; }
+
+  .btn-delete {
+    width: 100%; padding: 10px; margin-top: 12px;
+    background: linear-gradient(90deg, #be123c, #e11d48); color: #fff; border: none;
+    border-radius: 10px; font-size: 13px; cursor: pointer; transition: transform 0.2s;
+  }
+  .btn-delete:hover { transform: translateY(-1px); }
+
+  .btn-back {
+    width: 100%; padding: 12px; margin-top: 12px; background: var(--info-bg);
+    color: var(--text-primary); border: 1px solid var(--card-border); border-radius: 10px;
+    font-size: 13px; cursor: pointer; transition: transform 0.2s;
+  }
+  .btn-back:hover { transform: translateY(-1px); }
+
+  .btn-report {
+    width: 100%; padding: 12px; margin-top: 10px;
+    background: linear-gradient(90deg, #d97706, #f59e0b); color: #1c1300; border: none;
+    border-radius: 10px; font-size: 13px; cursor: pointer; transition: transform 0.2s;
+  }
+  .btn-report:hover { transform: translateY(-1px); }
+
+  .btn-cycle {
+    width: 100%; padding: 12px; margin-top: 10px;
+    background: linear-gradient(90deg, #0891b2, #06b6d4); color: #001a1c; border: none;
+    border-radius: 10px; font-size: 13px; cursor: pointer; transition: transform 0.2s;
+  }
+  .btn-cycle:hover { transform: translateY(-1px); }
+
+  .container.detail-mode .header,
+  .container.detail-mode .theme-picker,
+  .container.detail-mode #addToggleBtn,
+  .container.detail-mode .btn-row,
+  .container.detail-mode #addCard,
+  .container.detail-mode .footer { display: none; }
+  .container.detail-mode .ref-row:not(.open) { display: none; }
+
+  .footer { text-align: center; margin-top: 30px; padding: 18px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--row-border); }
+  .footer .dev { color: var(--text-primary); font-size: 13px; margin-top: 4px; }
+  .footer .heart { color: #ec4899; }
+  .footer-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .footer-actions button {
+    flex: 1; padding: 10px; background: var(--info-bg); color: var(--text-primary);
+    border: 1px solid var(--card-border); border-radius: 10px; font-size: 11px; cursor: pointer;
+  }
+
+  /* ===== Poster-style report overlay ===== */
+  .report-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(20,10,40,0.75);
+    backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 16px;
+  }
+  .report-overlay.open { display: flex; }
+
+  .poster-frame {
+    width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto;
+    background: linear-gradient(150deg, #7c3aed 0%, #ec4899 45%, #f59e0b 100%);
+    border-radius: 28px; padding: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .poster-card {
+    background: linear-gradient(180deg, #fffaf3, #fff);
+    border-radius: 22px; padding: 26px 22px 20px; position: relative; overflow: hidden;
+    min-height: 620px;
+  }
+  .poster-deco-1 {
+    position: absolute; top: -40px; right: -40px; width: 130px; height: 130px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,58,237,0.15), transparent 70%);
+  }
+  .poster-deco-2 {
+    position: absolute; bottom: -50px; left: -50px; width: 150px; height: 150px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,158,11,0.15), transparent 70%);
+  }
+  .poster-ribbon {
+    display: inline-block; background: linear-gradient(90deg, #7c3aed, #ec4899);
+    color: #fff; font-size: 11px; letter-spacing: 1px; padding: 5px 14px; border-radius: 20px;
+    position: relative; z-index: 1;
+  }
+  .poster-head { text-align: center; margin: 14px 0 16px; position: relative; z-index: 1; }
+  .poster-icon-circle {
+    width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 8px;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+    box-shadow: 0 6px 16px rgba(124,58,237,0.35);
+  }
+  .poster-title { color: #1c1917; font-size: 19px; }
+  .poster-sub { color: #78716c; font-size: 11px; margin-top: 3px; font-family: Arial, sans-serif; font-weight: normal; }
+
+  .poster-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; position: relative; z-index: 1; }
+  .poster-stat { border-radius: 14px; padding: 12px 10px; text-align: center; color: #fff; }
+  .poster-stat.c-purple { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+  .poster-stat.c-pink { background: linear-gradient(135deg, #db2777, #ec4899); }
+  .poster-stat.c-teal { background: linear-gradient(135deg, #0891b2, #06b6d4); }
+  .poster-stat.c-amber { background: linear-gradient(135deg, #d97706, #f59e0b); }
+  .poster-stat.c-red { background: linear-gradient(135deg, #be123c, #e11d48); }
+  .ps-label { font-size: 9.5px; letter-spacing: 0.5px; opacity: 0.9; }
+  .ps-value { font-size: 19px; margin-top: 3px; }
+
+  .poster-rate-row {
+    text-align: center; font-size: 11px; color: #78716c; margin: 8px 0 4px;
+    position: relative; z-index: 1; font-family: Arial, sans-serif; font-weight: normal;
+  }
+
+  .poster-total-banner {
+    margin-top: 12px; border-radius: 16px; padding: 16px;
+    background: linear-gradient(90deg, #7c3aed, #ec4899, #f59e0b);
+    text-align: center; position: relative; z-index: 1;
+    box-shadow: 0 8px 20px rgba(124,58,237,0.3);
+  }
+  .ptb-label { color: #fff; font-size: 11px; letter-spacing: 1px; opacity: 0.95; }
+  .ptb-value { color: #fff; font-size: 30px; margin-top: 4px; text-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+
+  .poster-footer {
+    text-align: center; margin-top: 14px; font-size: 10px; color: #a8a29e;
+    position: relative; z-index: 1; font-family: Arial, sans-serif; font-weight: normal;
+  }
+
+  .full-poster-list { position: relative; z-index: 1; margin-top: 6px; }
+  .full-meter-block {
+    padding: 12px 14px; border-radius: 14px; margin-bottom: 8px; display: flex;
+    justify-content: space-between; align-items: center; color: #fff;
+  }
+  .full-meter-block:nth-child(4n+1) { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+  .full-meter-block:nth-child(4n+2) { background: linear-gradient(135deg, #db2777, #ec4899); }
+  .full-meter-block:nth-child(4n+3) { background: linear-gradient(135deg, #0891b2, #06b6d4); }
+  .full-meter-block:nth-child(4n+4) { background: linear-gradient(135deg, #d97706, #f59e0b); }
+  .full-meter-name { font-size: 13px; }
+  .full-meter-sub { font-size: 9.5px; opacity: 0.9; margin-top: 2px; font-family: Arial, sans-serif; font-weight: normal; }
+  .full-meter-bill { font-size: 14px; text-align: right; }
+
+  .report-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding: 0 2px 2px; }
+  .report-actions button { flex: 1 1 45%; min-width: 110px; font-size: 12px; padding: 12px; border-radius: 10px; cursor: pointer; }
+  .report-actions .btn-close-x { flex: 1 1 100%; background: rgba(0,0,0,0.06); color: #57534e; border: 1px solid rgba(0,0,0,0.1); }
+  .report-actions .btn-wa { background: linear-gradient(90deg, #16a34a, #22c55e); color: #fff; border: none; }
+  .report-actions .btn-img { background: linear-gradient(90deg, #9333ea, #c026d3); color: #fff; border: none; }
+  .report-actions .btn-pdf { background: linear-gradient(90deg, #dc2626, #ef4444); color: #fff; border: none; }
+  .report-actions .btn-print { background: rgba(124,58,237,0.1); color: #6d28d9; border: 1px solid rgba(124,58,237,0.3); }
+
+  /* ===== Poster theme picker + theme variants ===== */
+  .poster-theme-picker { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+  .poster-theme-dot {
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  }
+  .poster-theme-dot.active { border-color: #1c1917; transform: scale(1.15); }
+  .poster-theme-dot.pt-colorful { background: linear-gradient(135deg,#7c3aed,#ec4899,#f59e0b); }
+  .poster-theme-dot.pt-light { background: linear-gradient(135deg,#f5f3ff,#fbcfe8); }
+  .poster-theme-dot.pt-mono { background: linear-gradient(135deg,#1c1917,#78716c); }
+  .poster-theme-dot.pt-ocean { background: linear-gradient(135deg,#0c4a6e,#0891b2); }
+
+  .poster-frame.theme-light { background: linear-gradient(150deg, #ede9fe 0%, #fce7f3 50%, #fef3c7 100%); }
+  .poster-frame.theme-light .poster-stat { background: rgba(124,58,237,0.10) !important; color: #3b0764 !important; }
+  .poster-frame.theme-light .poster-total-banner { background: linear-gradient(90deg, #ddd6fe, #fbcfe8) !important; }
+  .poster-frame.theme-light .ptb-label, .poster-frame.theme-light .ptb-value { color: #3b0764 !important; text-shadow: none !important; }
+  .poster-frame.theme-light .poster-ribbon { background: linear-gradient(90deg, #a78bfa, #f0abfc) !important; color: #3b0764 !important; }
+
+  .poster-frame.theme-mono { background: linear-gradient(150deg, #1c1917 0%, #57534e 100%); }
+  .poster-frame.theme-mono .poster-card { background: linear-gradient(180deg, #fafaf9, #fff) !important; }
+  .poster-frame.theme-mono .poster-stat { background: #292524 !important; color: #fff !important; }
+  .poster-frame.theme-mono .poster-total-banner { background: linear-gradient(90deg, #1c1917, #44403c) !important; }
+  .poster-frame.theme-mono .poster-ribbon { background: #1c1917 !important; }
+  .poster-frame.theme-mono .poster-icon-circle { background: linear-gradient(135deg, #1c1917, #57534e) !important; }
+  .poster-frame.theme-mono .full-meter-block { background: #292524 !important; }
+
+  .poster-frame.theme-ocean { background: linear-gradient(150deg, #0c4a6e 0%, #0891b2 60%, #06b6d4 100%); }
+  .poster-frame.theme-ocean .poster-stat { background: linear-gradient(135deg,#0369a1,#0891b2) !important; }
+  .poster-frame.theme-ocean .poster-total-banner { background: linear-gradient(90deg, #0c4a6e, #0891b2, #06b6d4) !important; }
+  .poster-frame.theme-ocean .poster-ribbon { background: linear-gradient(90deg,#0c4a6e,#0891b2) !important; }
+  .poster-frame.theme-ocean .poster-icon-circle { background: linear-gradient(135deg,#0c4a6e,#0891b2) !important; }
+  .poster-frame.theme-ocean .full-meter-block { background: linear-gradient(135deg,#0369a1,#0891b2) !important; }
+
+  .poster-frame.theme-emerald { background: linear-gradient(150deg, #064e3b 0%, #059669 55%, #a3e635 100%); }
+  .poster-frame.theme-emerald .poster-stat { background: linear-gradient(135deg,#047857,#059669) !important; }
+  .poster-frame.theme-emerald .poster-total-banner { background: linear-gradient(90deg, #064e3b, #059669, #a3e635) !important; }
+  .poster-frame.theme-emerald .poster-ribbon { background: linear-gradient(90deg,#064e3b,#059669) !important; }
+  .poster-frame.theme-emerald .poster-icon-circle { background: linear-gradient(135deg,#064e3b,#059669) !important; }
+  .poster-frame.theme-emerald .full-meter-block { background: linear-gradient(135deg,#047857,#059669) !important; }
+  .poster-frame.theme-emerald .poster-readings-table th { background: linear-gradient(90deg,#047857,#059669) !important; }
+  .poster-theme-dot.pt-emerald { background: linear-gradient(135deg,#064e3b,#a3e635); }
+
+  .poster-size-picker { display: flex; gap: 6px; justify-content: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .poster-size-btn {
+    padding: 6px 12px; border-radius: 20px; font-size: 11px; cursor: pointer;
+    background: rgba(255,255,255,0.85); color: #3b0764; border: 2px solid rgba(255,255,255,0.9);
+    font-family: Arial, sans-serif; transition: transform 0.15s;
+  }
+  .poster-size-btn:hover { transform: translateY(-1px); }
+  .poster-size-btn.active { background: #3b0764; color: #fff; border-color: #3b0764; }
+
+  .poster-readings-wrap { position: relative; z-index: 1; margin: 14px 0 4px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(0,0,0,0.08); }
+  .poster-readings-title { font-size: 12px; color: #57534e; margin: 12px 0 6px; position: relative; z-index: 1; font-family: Arial, sans-serif; font-weight: bold; }
+  .poster-readings-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  .poster-readings-table th { background: linear-gradient(90deg, #7c3aed, #ec4899); color: #fff; padding: 7px 4px; font-size: 9.5px; text-align: center; font-family: Arial, sans-serif; }
+  .poster-readings-table td { padding: 6px 4px; text-align: center; color: #292524; border-bottom: 1px solid rgba(0,0,0,0.06); background: rgba(255,255,255,0.6); font-family: Arial, sans-serif; }
+  .poster-readings-table tbody tr:last-child td { border-bottom: none; }
+  .poster-records-row { display: flex; justify-content: space-between; font-size: 10.5px; color: #57534e; padding: 6px 10px; background: rgba(255,255,255,0.5); border-radius: 8px; margin-top: 5px; font-family: Arial, sans-serif; position: relative; z-index: 1; }
+
+  .toast-wrap { position: fixed; top: 14px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 999; pointer-events: none; padding: 0 14px; }
+  .toast {
+    max-width: 420px; width: 100%; background: linear-gradient(90deg, #d97706, #f59e0b);
+    color: #fff; padding: 12px 16px; border-radius: 12px; font-size: 12px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.25); animation: toastIn 0.3s ease;
+  }
+  .toast.over { background: linear-gradient(90deg, #be123c, #e11d48); }
+  @keyframes toastIn { from { opacity:0; transform: translateY(-12px); } to { opacity:1; transform: translateY(0); } }
+
+  @media print {
+    body * { visibility: hidden; }
+    .printable-area, .printable-area * { visibility: visible; }
+    .printable-area { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; }
+    .report-actions, .footer, .toast-wrap { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<div class="container">
+
+  <div class="theme-picker">
+    <div class="theme-dot lavender active" onclick="setTheme('lavender', this)" title="Lavender"></div>
+    <div class="theme-dot sky" onclick="setTheme('sky', this)" title="Sky"></div>
+    <div class="theme-dot mint" onclick="setTheme('mint', this)" title="Mint"></div>
+    <div class="theme-dot peach" onclick="setTheme('peach', this)" title="Peach"></div>
+  </div>
+
+  <div class="header">
+    <h1>⚡ Multi Meter Tracker</h1>
+    <p>Track your electricity meters easily</p>
+    <p id="versionBadge" style="font-size:10px; opacity:0.65; margin-top:3px;"></p>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-add-toggle" id="addToggleBtn" onclick="toggleAddForm()" style="margin-top:0;">
+      <span class="plus-icon">+</span> Add Meter
+    </button>
+    <button class="btn-secondary" onclick="openFullReport()">📊 Full Report</button>
+  </div>
+
+  <div class="card" id="addCard" style="display:none;">
+    <h3>➕ Add New Meter</h3>
+    <input id="name" placeholder="Meter Name">
+    <input id="ref" placeholder="Reference No">
+    <input id="meter" placeholder="Meter No">
+    <input id="base" type="number" placeholder="Base Reading (is month ki shuru reading)">
+    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">🗓️ بیس ریڈنگ کا مہینہ (تاریخ ہمیشہ خودکار طور پر اُس مہینے کی یکم ہوگی — یہی ٹرینڈ حساب کی بنیاد ہے)</div>
+    <input id="baseDate" type="month">
+    <input id="rate" type="number" step="0.01" placeholder="Price per Unit (Rs)">
+    <input id="quota" type="number" placeholder="Monthly Quota / Limit (default 200)">
+    <input id="reminder" type="number" placeholder="Alert when remaining units = (default 50)">
+    <button class="btn-add" onclick="add()">⚡ Add Meter</button>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="footer">
+    <div>Made with <span class="heart">❤️</span> for easy meter management</div>
+    <div class="dev">👨‍💻 Developed by Qamar Sajid Ali</div>
+    <div class="footer-actions">
+      <button onclick="enableNotifications()">🔔 Enable Alerts</button>
+      <button onclick="exportBackup()">⬇️ Backup</button>
+      <button onclick="document.getElementById('importFile').click()">⬆️ Restore</button>
+      <button onclick="openAutoBackups()">🗄️ اندرونی بیک اپ</button>
+    </div>
+    <input type="file" id="importFile" accept=".json,application/json,text/plain,*/*" style="display:none" onchange="importBackup(this.files[0])">
+  </div>
+
+  <div class="report-overlay" id="reportOverlay" onclick="if(event.target===this)closeReport()">
+    <div style="width:100%; max-width:420px;">
+      <div class="poster-theme-picker">
+        <div class="poster-theme-dot pt-colorful active" onclick="setPosterTheme('reportCard','colorful',this)" title="Colorful"></div>
+        <div class="poster-theme-dot pt-light" onclick="setPosterTheme('reportCard','light',this)" title="Light"></div>
+        <div class="poster-theme-dot pt-mono" onclick="setPosterTheme('reportCard','mono',this)" title="Black & White"></div>
+        <div class="poster-theme-dot pt-ocean" onclick="setPosterTheme('reportCard','ocean',this)" title="Ocean"></div>
+        <div class="poster-theme-dot pt-emerald" onclick="setPosterTheme('reportCard','emerald',this)" title="Emerald"></div>
+      </div>
+      <div class="poster-size-picker">
+        <div class="poster-size-btn active" onclick="setPosterSize('reportCard','classic',this)">📄 Classic</div>
+        <div class="poster-size-btn" onclick="setPosterSize('reportCard','square',this)">⬛ Square</div>
+        <div class="poster-size-btn" onclick="setPosterSize('reportCard','post',this)">🖼️ Post</div>
+        <div class="poster-size-btn" onclick="setPosterSize('reportCard','story',this)">📱 Story</div>
+      </div>
+      <div class="poster-frame printable-area" id="reportCard"></div>
+    </div>
+  </div>
+
+  <div class="report-overlay" id="fullReportOverlay" onclick="if(event.target===this)closeFullReport()">
+    <div style="width:100%; max-width:420px;">
+      <div class="poster-theme-picker">
+        <div class="poster-theme-dot pt-colorful active" onclick="setPosterTheme('fullReportCard','colorful',this)" title="Colorful"></div>
+        <div class="poster-theme-dot pt-light" onclick="setPosterTheme('fullReportCard','light',this)" title="Light"></div>
+        <div class="poster-theme-dot pt-mono" onclick="setPosterTheme('fullReportCard','mono',this)" title="Black & White"></div>
+        <div class="poster-theme-dot pt-ocean" onclick="setPosterTheme('fullReportCard','ocean',this)" title="Ocean"></div>
+        <div class="poster-theme-dot pt-emerald" onclick="setPosterTheme('fullReportCard','emerald',this)" title="Emerald"></div>
+      </div>
+      <div class="poster-size-picker">
+        <div class="poster-size-btn active" onclick="setPosterSize('fullReportCard','classic',this)">📄 Classic</div>
+        <div class="poster-size-btn" onclick="setPosterSize('fullReportCard','square',this)">⬛ Square</div>
+        <div class="poster-size-btn" onclick="setPosterSize('fullReportCard','post',this)">🖼️ Post</div>
+        <div class="poster-size-btn" onclick="setPosterSize('fullReportCard','story',this)">📱 Story</div>
+      </div>
+      <div class="poster-frame printable-area" id="fullReportCard"></div>
+    </div>
+  </div>
+
+  <div class="report-overlay" id="autoBackupOverlay" onclick="if(event.target===this)closeAutoBackups()">
+    <div class="card" style="width:100%; max-width:420px; max-height:85vh; overflow-y:auto;">
+      <h3>🗄️ اندرونی خودکار بیک اپ</h3>
+      <div style="font-size:11px; color:var(--text-secondary); margin-bottom:10px;">
+        ایپ خود بخود روزانہ دوپہر 12 بجے (اگر اس وقت یا اس کے بعد ایپ کھلی ہو) ڈیٹا کا بیک اپ فون کے اندر محفوظ کر لیتی ہے۔ نیچے سے کسی بھی تاریخ کا بیک اپ بحال کیا جا سکتا ہے۔
+      </div>
+      <div id="autoBackupList"></div>
+      <button class="btn-back" onclick="closeAutoBackups()">⬅ بند کریں</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+
+const APP_BUILD_VERSION = "MT510MO001";
+
+/* ===== IndexedDB layer — extra-durable storage alongside localStorage ===== */
+const IDB_NAME = "meterTrackerDB";
+const IDB_VER = 1;
+let idbPromise = null;
+function openIDB(){
+  if(idbPromise) return idbPromise;
+  idbPromise = new Promise((resolve)=>{
+    if(!("indexedDB" in window)){ resolve(null); return; }
+    let req;
+    try{ req = indexedDB.open(IDB_NAME, IDB_VER); }catch(e){ resolve(null); return; }
+    req.onupgradeneeded = function(e){
+      let db = e.target.result;
+      if(!db.objectStoreNames.contains("appData")) db.createObjectStore("appData");
+      if(!db.objectStoreNames.contains("backups")) db.createObjectStore("backups");
+    };
+    req.onsuccess = function(e){ resolve(e.target.result); };
+    req.onerror = function(){ resolve(null); };
+  });
+  return idbPromise;
+}
+async function idbSet(store, key, value){
+  try{
+    let db = await openIDB();
+    if(!db) return false;
+    return new Promise((resolve)=>{
+      let tx = db.transaction(store, "readwrite");
+      tx.objectStore(store).put(value, key);
+      tx.oncomplete = ()=>resolve(true);
+      tx.onerror = ()=>resolve(false);
+    });
+  }catch(e){ return false; }
+}
+async function idbGet(store, key){
+  try{
+    let db = await openIDB();
+    if(!db) return undefined;
+    return new Promise((resolve)=>{
+      let tx = db.transaction(store, "readonly");
+      let req = tx.objectStore(store).get(key);
+      req.onsuccess = ()=>resolve(req.result);
+      req.onerror = ()=>resolve(undefined);
+    });
+  }catch(e){ return undefined; }
+}
+async function idbGetAllKeys(store){
+  try{
+    let db = await openIDB();
+    if(!db) return [];
+    return new Promise((resolve)=>{
+      let tx = db.transaction(store, "readonly");
+      let req = tx.objectStore(store).getAllKeys();
+      req.onsuccess = ()=>resolve(req.result || []);
+      req.onerror = ()=>resolve([]);
+    });
+  }catch(e){ return []; }
+}
+async function idbDelete(store, key){
+  try{
+    let db = await openIDB();
+    if(!db) return;
+    let tx = db.transaction(store, "readwrite");
+    tx.objectStore(store).delete(key);
+  }catch(e){}
+}
+
+let meters = JSON.parse(localStorage.getItem("meters") || "[]");
+let openIndex = null;
+
+function save(){
+  localStorage.setItem("meters", JSON.stringify(meters));
+  idbSet("appData", "meters", meters); // fire-and-forget durable copy — survives localStorage getting cleared
+}
+
+function renderVersionBadge(){
+  let el = document.getElementById("versionBadge");
+  if(el) el.textContent = "ورژن: " + APP_BUILD_VERSION;
+}
+
+function normalizeAndRenderAll(){
+  let repaired = false;
+  meters.forEach((m,i)=>{
+    if(!m.notified) m.notified = {warned:false, over:false};
+    if(!m.history) m.history = [];
+    if(m.baseDate && repairBaseDate(m)) repaired = true;
+    if(!m.baseDate){
+      if(m.history.length > 0 && m.history[0].ts){
+        m.baseDate = forceFirstOfMonth(ymdLocal(new Date(m.history[0].ts)));
+      } else {
+        m.baseDate = forceFirstOfMonth();
+      }
+    }
+  });
+  if(repaired) save();
+  render();
+  meters.forEach((m,i)=>{ checkAlerts(i); });
+}
+
+async function loadFromIDB(){
+  let idbMeters = await idbGet("appData", "meters");
+  if(Array.isArray(idbMeters) && idbMeters.length >= meters.length && idbMeters.length > 0){
+    meters = idbMeters;
+    normalizeAndRenderAll();
+  } else if(meters.length){
+    idbSet("appData", "meters", meters); // seed IndexedDB from existing localStorage data
+  }
+}
+
+/* ===== Daily-at-noon internal auto-backup ===== */
+const AUTO_BACKUP_PREFIX = "auto_";
+const AUTO_BACKUP_KEEP = 30;
+
+function localDateKey(d){
+  d = d || new Date();
+  let y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,"0"), day = String(d.getDate()).padStart(2,"0");
+  return y + "-" + m + "-" + day;
+}
+
+async function checkDailyBackup(){
+  let now = new Date();
+  if(now.getHours() < 12) return; // dopeher 12 baje se pehle backup nahi lena
+  if(!meters.length) return;
+  let key = AUTO_BACKUP_PREFIX + localDateKey(now);
+  let existing = await idbGet("backups", key);
+  if(existing) return; // aaj ka backup pehle ho chuka hai
+  let snapshot = { ts: now.toISOString(), meters: JSON.parse(JSON.stringify(meters)) };
+  await idbSet("backups", key, snapshot);
+  await pruneOldBackups();
+  showToast("🗄️ خودکار بیک اپ محفوظ ہو گیا");
+}
+
+async function pruneOldBackups(){
+  let keys = (await idbGetAllKeys("backups")).filter(k => k.startsWith(AUTO_BACKUP_PREFIX)).sort();
+  while(keys.length > AUTO_BACKUP_KEEP){
+    let oldest = keys.shift();
+    await idbDelete("backups", oldest);
+  }
+}
+
+async function openAutoBackups(){
+  let keys = (await idbGetAllKeys("backups")).filter(k => k.startsWith(AUTO_BACKUP_PREFIX)).sort().reverse();
+  let list = document.getElementById("autoBackupList");
+  if(!keys.length){
+    list.innerHTML = '<div style="padding:10px 4px;font-size:12px;color:var(--text-secondary);">ابھی تک کوئی خودکار بیک اپ محفوظ نہیں ہوا۔ پہلا بیک اپ آج دوپہر 12 بجے کے بعد ایپ کھولنے پر بن جائے گا۔</div>';
+  } else {
+    let html = "";
+    for(let k of keys){
+      let rec = await idbGet("backups", k);
+      let dateStr = k.replace(AUTO_BACKUP_PREFIX, "");
+      let countStr = rec && Array.isArray(rec.meters) ? rec.meters.length + " میٹرز" : "";
+      html += '<div class="info-item" style="cursor:default;">📅 ' + dateStr + '<span>' + countStr + '</span></div>'
+            + '<button class="btn-add" style="margin:4px 0 12px; padding:9px; font-size:12px;" onclick="restoreAutoBackup(\'' + k + '\')">↩️ اس تاریخ سے بحال کریں</button>';
+    }
+    list.innerHTML = html;
+  }
+  document.getElementById("autoBackupOverlay").classList.add("open");
+}
+function closeAutoBackups(){ document.getElementById("autoBackupOverlay").classList.remove("open"); }
+
+async function restoreAutoBackup(key){
+  let rec = await idbGet("backups", key);
+  if(!rec || !Array.isArray(rec.meters)){ alert("یہ بیک اپ پڑھا نہیں جا سکا۔"); return; }
+  if(!confirm((key.replace(AUTO_BACKUP_PREFIX,"")) + " والے بیک اپ سے ڈیٹا بحال کریں؟ موجودہ ڈیٹا اوور رائٹ ہو جائے گا۔")) return;
+  meters = JSON.parse(JSON.stringify(rec.meters));
+  save();
+  normalizeAndRenderAll();
+  closeAutoBackups();
+  showToast("✅ بیک اپ بحال ہو گیا!");
+}
+
+function setTheme(name, el){
+  document.body.className = name === "lavender" ? "" : "theme-" + name;
+  localStorage.setItem("appTheme", name);
+  document.querySelectorAll(".theme-dot").forEach(d => d.classList.remove("active"));
+  el.classList.add("active");
+}
+(function initTheme(){
+  let saved = localStorage.getItem("appTheme") || "lavender";
+  document.body.className = saved === "lavender" ? "" : "theme-" + saved;
+})();
+
+function showToast(msg, isOver){
+  let wrap = document.getElementById("toastWrap");
+  let el = document.createElement("div");
+  el.className = "toast" + (isOver ? " over" : "");
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.transition="opacity 0.4s"; el.style.opacity="0"; setTimeout(()=>el.remove(),400); }, 5000);
+}
+
+function enableNotifications(){
+  if(!("Notification" in window)){ alert("Is browser mein notifications support nahi hain."); return; }
+  Notification.requestPermission().then(perm=>{
+    if(perm === "granted"){ showToast("🔔 Alerts enabled! Ab aapko reminders milte rahenge."); }
+    else { alert("Notifications allow nahi hui. Aapko sirf on-screen alerts milenge."); }
+  });
+}
+
+function notifyUser(title, body, isOver){
+  showToast(title + " — " + body, isOver);
+  if("Notification" in window && Notification.permission === "granted"){
+    try{ new Notification(title, {body: body}); }catch(e){}
+  }
+}
+
+function checkAlerts(i){
+  let m = meters[i];
+  let used = (m.current||0) - (m.base||0);
+  let quota = m.quota || 200;
+  let reminderAt = (m.reminderAt !== undefined && m.reminderAt !== null) ? m.reminderAt : 50;
+  let remain = quota - used;
+  if(!m.notified) m.notified = {warned:false, over:false};
+
+  if(remain <= 0){
+    if(!m.notified.over){
+      notifyUser("🚨 Quota Over!", `${m.name}: aapki ${quota} unit ki quota se ${Math.abs(remain)} unit zyada ho gayi hain.`, true);
+      m.notified.over = true;
+      m.notified.warned = true;
+    }
+  } else if(remain <= reminderAt){
+    if(!m.notified.warned){
+      notifyUser("⚠️ Units Kam Reh Gaye", `${m.name}: sirf ${remain} unit baaqi hain (quota ${quota}). Bijli ka istemaal kam karein.`, false);
+      m.notified.warned = true;
+    }
+  } else {
+    m.notified.warned = false;
+    m.notified.over = false;
+  }
+  save();
+}
+
+function toggle(i){
+  let row = document.getElementById("row_"+i);
+  let isOpen = row.classList.contains("open");
+  if(isOpen){ history.back(); }
+  else{
+    applyAddFormClose();
+    history.pushState({view:"detail", index:i}, "");
+    applyDetailOpen(i);
+  }
+}
+
+function applyDetailOpen(i){
+  document.querySelectorAll(".ref-row.open").forEach(r => r.classList.remove("open"));
+  let row = document.getElementById("row_"+i);
+  if(row) row.classList.add("open");
+  document.querySelector(".container").classList.add("detail-mode");
+  openIndex = i;
+}
+
+function applyDetailClose(){
+  document.querySelectorAll(".ref-row.open").forEach(r => r.classList.remove("open"));
+  document.querySelector(".container").classList.remove("detail-mode");
+  openIndex = null;
+}
+
+function toggleAddForm(){
+  let card = document.getElementById("addCard");
+  let isOpen = card.style.display !== "none";
+  if(isOpen){ history.back(); }
+  else{
+    history.pushState({view:"addform"}, "");
+    applyAddFormOpen();
+  }
+}
+
+// ---- LOCAL date helpers (FIX: toISOString() converts to UTC, which in Pakistan
+// (UTC+5) turned "1st of the month" into the LAST day of the previous month and
+// the base date kept drifting backwards → wrong daily trend & month-end projection) ----
+function ymdLocal(d){
+  d = d || new Date();
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function parseLocalDate(str){
+  if(!str) return new Date();
+  let m = /^(\d{4})-(\d{2})(?:-(\d{2}))?/.exec(str);
+  if(m) return new Date(+m[1], +m[2]-1, m[3] ? +m[3] : 1, 0, 0, 0);
+  let d = new Date(str); return isNaN(d.getTime()) ? new Date() : d;
+}
+// Whole-day index of a date in LOCAL time (DST-safe via UTC of local Y/M/D)
+function dayIndex(d){
+  d = (d instanceof Date) ? d : new Date(d);
+  return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+}
+// Repairs a base date that drifted because of the old UTC bug (e.g. "2026-08-31"
+// instead of "2026-10-01"). Only touches dates that are NOT the 1st.
+function repairBaseDate(m){
+  if(!m || !m.baseDate) return false;
+  let raw = String(m.baseDate);
+  if(/^\d{4}-\d{2}-01$/.test(raw)) return false;
+  let d = parseLocalDate(raw);
+  let fixed = new Date(d.getFullYear(), d.getMonth()+1, 1); // drifted day → next month's 1st
+  let hist = (m.history||[]).filter(h=>h && h.ts);
+  if(hist.length){
+    let first = new Date(Math.min.apply(null, hist.map(h=>h.ts)));
+    let firstMonth = new Date(first.getFullYear(), first.getMonth(), 1);
+    if(firstMonth > fixed) fixed = firstMonth; // readings of this cycle start in a later month
+  }
+  m.baseDate = ymdLocal(fixed);
+  return true;
+}
+
+function firstOfMonthStr(){
+  let now = new Date();
+  return ymdLocal(new Date(now.getFullYear(), now.getMonth(), 1));
+}
+function currentMonthStr(){
+  let now = new Date();
+  let mm = String(now.getMonth()+1).padStart(2,"0");
+  return now.getFullYear() + "-" + mm; // matches <input type="month"> format
+}
+
+// GUARANTEE: Base Date must ALWAYS be the 1st of a month, since billing/trend
+// calculations are always done on a full-month basis. No matter what date a
+// user types in (any day of any month), this snaps it to the 1st of that
+// same month. This is used everywhere baseDate is set, so it can never drift
+// to "today" (or any other mid-month day) by mistake again.
+function forceFirstOfMonth(dateStr){
+  let d = dateStr ? new Date(dateStr + "T12:00:00") : new Date();
+  if(isNaN(d.getTime())) d = new Date();
+  return ymdLocal(new Date(d.getFullYear(), d.getMonth(), 1));
+}
+
+function applyAddFormOpen(){
+  document.getElementById("addCard").style.display = "block";
+  document.getElementById("addToggleBtn").classList.add("open");
+  let baseDateInput = document.getElementById("baseDate");
+  if(baseDateInput && !baseDateInput.value) baseDateInput.value = currentMonthStr();
+  document.getElementById("name").focus();
+}
+function applyAddFormClose(){
+  document.getElementById("addCard").style.display = "none";
+  document.getElementById("addToggleBtn").classList.remove("open");
+}
+
+window.addEventListener("popstate", function(e){
+  let state = e.state || {view:"list"};
+  if(state.view === "detail"){ applyDetailOpen(state.index); applyAddFormClose(); }
+  else if(state.view === "addform"){ applyAddFormOpen(); applyDetailClose(); }
+  else { applyDetailClose(); applyAddFormClose(); }
+});
+history.replaceState({view:"list"}, "");
+
+function add(){
+  let nameVal = document.getElementById("name").value.trim();
+  if(!nameVal){ alert("Please enter Meter Name"); return; }
+  let quotaVal = parseFloat(document.getElementById("quota").value);
+  let reminderVal = parseFloat(document.getElementById("reminder").value);
+  // Month input gives "YYYY-MM"; always force to the 1st of that month.
+  let baseDateVal = forceFirstOfMonth((document.getElementById("baseDate").value || currentMonthStr()) + "-01");
+  meters.push({
+    name: nameVal,
+    ref: document.getElementById("ref").value,
+    meter: document.getElementById("meter").value,
+    base: parseFloat(document.getElementById("base").value)||0,
+    rate: parseFloat(document.getElementById("rate").value)||0,
+    quota: isNaN(quotaVal) ? 200 : quotaVal,
+    reminderAt: isNaN(reminderVal) ? 50 : reminderVal,
+    current: 0,
+    baseDate: baseDateVal,
+    history: [],
+    records: [],
+    notified: {warned:false, over:false}
+  });
+  ["name","ref","meter","base","rate","quota","reminder"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("baseDate").value = currentMonthStr();
+  save(); render(); toggleAddForm();
+}
+
+function del(i){
+  if(confirm("Delete this meter?")){ meters.splice(i,1); save(); render(); }
+}
+
+function resetMeterData(i){
+  let m = meters[i];
+  if(!m) return;
+  let step1 = confirm(
+    `⚠️ WARNING — REAL YOU WANT TO RESET?\n\n"${m.name}" میٹر کا مکمل ڈیٹا زیرو کرنے لگے ہیں۔\n\nاس سے یہ سب کچھ ہمیشہ کے لیے صاف ہو جائے گا:\n• موجودہ اور بیس ریڈنگ (Current & Base Reading)\n• اس مہینے کی تمام ریڈنگز (Current Month Records)\n• تمام پچھلے بند شدہ مہینوں کے ریکارڈز (All Previous Closed Records)\n\nصرف اسی مہینے کا ریکارڈ زیرو کرنا ہو تو یہ عمل منسوخ کریں اور "Monthly Records" میں سے صرف اُس ایک مہینے کے ریکارڈ کے سامنے 🗑️ آئیکن استعمال کریں۔\n\nکیا آپ واقعی پورا ڈیٹا ری سیٹ کرنا چاہتے ہیں؟`
+  );
+  if(!step1) return;
+  let step2 = confirm(`آخری تصدیق (Final Confirmation):\n\n"${m.name}" — کیا آپ سو فیصد یقینی ہیں؟ یہ عمل واپس نہیں ہو سکتا (This CANNOT be undone)!`);
+  if(!step2) return;
+  m.base = 0;
+  m.baseDate = forceFirstOfMonth(); // always 1st of current month
+  m.current = 0;
+  m.history = [];
+  m.records = [];
+  m.notified = {warned:false, over:false};
+  save(); render();
+  showToast(`🧨 "${m.name}" کا مکمل ڈیٹا زیرو / ری سیٹ ہو گیا۔`);
+}
+
+function update(i, val){
+  meters[i].current = parseFloat(val)||0;
+  save(); checkAlerts(i); renderStats(i); updateRowBadges(i);
+}
+
+function saveHistory(i, val, dateStr){
+  let m = meters[i];
+  let reading = parseFloat(val)||0;
+  if(!m.history) m.history = [];
+  let ts = dateStr ? new Date(dateStr + "T12:00:00").getTime() : new Date().getTime();
+  if(isNaN(ts)) ts = new Date().getTime();
+  let dateLabel = new Date(ts).toLocaleDateString();
+  m.history.push({ date: dateLabel, ts: ts, reading: reading });
+  m.history.sort((a,b) => (a.ts||0) - (b.ts||0));
+  save(); renderReadingsTable(i);
+}
+
+function addReadingEntry(i){
+  let input = document.getElementById("curInput_"+i);
+  let dateInput = document.getElementById("readingDate_"+i);
+  if(!input || input.value === ""){ alert("پہلے ریڈنگ لکھیں۔"); return; }
+  let reading = parseFloat(input.value)||0;
+  let dateVal = dateInput && dateInput.value ? dateInput.value : ymdLocal(new Date());
+  let chkBefore = document.getElementById("lastReadingChk_"+i);
+  let wasLastReading = !!(chkBefore && chkBefore.checked);
+  meters[i].current = reading;
+  save();
+  saveHistory(i, reading, dateVal);
+  checkAlerts(i);
+  render();
+  showToast("✅ ریڈنگ شامل ہو گئی۔");
+  if(wasLastReading){
+    if(confirm("کیا یہ اس مہینے کی آخری ریڈنگ ہے؟\nاس سے یہ مہینے کا سائیکل بند ہو جائے گا، مکمل رپورٹ بن جائے گی، اور نیا سائیکل اسی ریڈنگ سے شروع ہوگا۔\n\nاگر ہاں، تو کنفرم کریں۔")){
+      closeMonth(i);
+    }
+  }
+}
+
+function editHistoryEntry(i, idx){
+  let m = meters[i];
+  let h = m.history[idx];
+  if(!h) return;
+  let curDate = h.ts ? ymdLocal(new Date(h.ts)) : ymdLocal(new Date());
+  let newReading = prompt("ریڈنگ درست کریں:", h.reading);
+  if(newReading === null || newReading.trim() === "") return;
+  let newDate = prompt("تاریخ درست کریں (YYYY-MM-DD):", curDate);
+  if(newDate === null || newDate.trim() === "") return;
+  let ts = new Date(newDate + "T12:00:00").getTime();
+  if(isNaN(ts)){ alert("تاریخ درست فارمیٹ میں نہیں ہے۔"); return; }
+  h.reading = parseFloat(newReading)||0;
+  h.ts = ts;
+  h.date = new Date(ts).toLocaleDateString();
+  m.history.sort((a,b) => (a.ts||0) - (b.ts||0));
+  let last = m.history[m.history.length-1];
+  if(last){ m.current = last.reading; }
+  save(); checkAlerts(i);
+  render();
+  showToast("✅ انٹری اپڈیٹ ہو گئی۔");
+}
+
+function deleteHistoryEntry(i, idx){
+  let m = meters[i];
+  let h = m.history[idx];
+  if(!h) return;
+  if(!confirm(`کیا آپ واقعی یہ انٹری حذف کرنا چاہتے ہیں؟\n${h.date} — ${h.reading} یونٹس`)) return;
+  m.history.splice(idx, 1);
+  let last = m.history[m.history.length-1];
+  m.current = last ? last.reading : (m.base||0);
+  save(); checkAlerts(i);
+  render();
+  showToast("🗑️ انٹری حذف ہو گئی۔");
+}
+
+function toggleHistory(i){ let el = document.getElementById("history_"+i); if(el) el.classList.toggle("open"); }
+
+function renderReadingsTable(i){
+  let el = document.getElementById("readingsTable_"+i);
+  if(!el) return;
+  let m = meters[i];
+  let hist = m.history || [];
+  let s = computeMeterState(m);
+  if(hist.length === 0){
+    el.innerHTML = `<div class="history-empty">ابھی کوئی ریڈنگ شامل نہیں ہوئی</div>`;
+    return;
+  }
+  let base = m.base||0;
+  let baseTs = m.baseDate ? parseLocalDate(m.baseDate).getTime() : (hist[0].ts || Date.now());
+  let prevReading = base;
+  let prevTs = baseTs;
+  let rows = hist.map((h, idx) => {
+    let ts = h.ts || Date.parse(h.date) || prevTs;
+    let unitsInc = Math.max((h.reading||0) - prevReading, 0);
+    let daysGap = Math.max(1, dayIndex(ts) - dayIndex(prevTs) + (prevTs === baseTs ? 1 : 0));
+    let perDay = unitsInc / daysGap;
+    let billInc = unitsInc * (m.rate||0);
+    let rowHtml = `
+      <tr>
+        <td>${h.date}</td>
+        <td>${h.reading}</td>
+        <td>${unitsInc}</td>
+        <td>${perDay.toFixed(1)}</td>
+        <td>Rs ${billInc.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+        <td class="rt-actions">
+          <span class="rt-edit" onclick="editHistoryEntry(${i}, ${idx})" title="ایڈٹ کریں">✏️</span>
+          <span class="rt-del" onclick="deleteHistoryEntry(${i}, ${idx})" title="حذف کریں">🗑️</span>
+        </td>
+      </tr>`;
+    prevReading = h.reading||0;
+    prevTs = ts;
+    return rowHtml;
+  }).join("");
+  el.innerHTML = `
+    <div class="readings-table-wrap">
+      <table class="readings-table">
+        <thead><tr><th>تاریخ</th><th>ریڈنگ</th><th>یونٹس</th><th>روزانہ</th><th>بل</th><th>ترمیم</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="readings-summary">
+        <div class="rs-row"><span>💰 کل بل (اب تک)</span><span>Rs ${s.bill.toLocaleString(undefined,{maximumFractionDigits:0})}</span></div>
+        <div class="rs-row ${s.over?'over':''}"><span>${s.over ? '🚨 کوٹے سے زیادہ' : '🔋 کوٹے میں سے باقی'}</span><span>${s.remain} / ${s.quota} units</span></div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleRecords(i){ let el = document.getElementById("records_"+i); if(el) el.classList.toggle("open"); }
+
+function renderRecords(i){
+  let el = document.getElementById("records_"+i);
+  if(!el) return;
+  let recs = meters[i].records || [];
+  if(recs.length === 0){ el.innerHTML = `<div class="history-empty">Abhi koi mahina close nahi hua</div>`; return; }
+  el.innerHTML = recs.map((r, idx) => `
+    <div class="record-item">
+      <div class="rec-top">
+        <span>${r.label}</span>
+        <span style="display:flex; align-items:center; gap:8px;">
+          <span class="rec-bill">Rs ${Number(r.bill).toLocaleString(undefined,{maximumFractionDigits:0})}</span>
+          <span class="rt-del" style="cursor:pointer;" onclick="deleteRecord(${i}, ${idx})" title="اس مہینے کا ریکارڈ حذف/زیرو کریں">🗑️</span>
+        </span>
+      </div>
+      <div class="rec-sub">${r.base} → ${r.current} (${r.used} units @ Rs${r.rate}) · closed ${r.closedAt}</div>
+    </div>
+  `).reverse().join("");
+}
+
+function deleteRecord(i, idx){
+  let m = meters[i];
+  let r = m.records && m.records[idx];
+  if(!r) return;
+  if(!confirm(`⚠️ کیا آپ واقعی "${r.label}" کا ریکارڈ حذف/زیرو کرنا چاہتے ہیں؟\n\nUnits: ${r.used} — Bill: Rs ${Number(r.bill).toLocaleString(undefined,{maximumFractionDigits:0})}\n\nیہ عمل واپس نہیں ہو سکتا (cannot be undone).`)) return;
+  m.records.splice(idx, 1);
+  save(); renderRecords(i);
+  showToast(`🗑️ "${r.label}" کا ریکارڈ حذف ہو گیا۔`);
+}
+
+function closeMonth(i){
+  let m = meters[i];
+  let used = (m.current||0) - (m.base||0);
+  let bill = Math.max(used,0) * (m.rate||0);
+  let defaultLabel = new Date().toLocaleDateString(undefined,{month:"long", year:"numeric"});
+  let label = prompt("Is cycle ka naam / mahina likhein:", defaultLabel);
+  if(label === null) return;
+  if(!confirm(`Confirm karein: "${label}" cycle band ho jayegi.\nUnits: ${used}, Bill: Rs ${bill.toLocaleString(undefined,{maximumFractionDigits:0})}\n\nNaya cycle current reading (${m.current}) se base ban kar shuru hoga.`)) return;
+
+  if(!m.records) m.records = [];
+  m.records.push({
+    label: label.trim() || defaultLabel, base: m.base||0, current: m.current||0,
+    used: used, rate: m.rate||0, bill: bill, quota: m.quota||200,
+    closedAt: new Date().toLocaleDateString()
+  });
+  m.base = m.current||0;
+  m.baseDate = forceFirstOfMonth(); // always 1st of current month, never a mid-month day
+  m.history = [];
+  m.notified = {warned:false, over:false};
+  save(); render();
+  showToast(`✅ "${label}" band ho gaya. Naya cycle shuru.`);
+  generateReport(i);
+}
+
+function editBase(i){
+  let m = meters[i];
+  let newBase = prompt("بیس ریڈنگ درج کریں:", m.base);
+  if(newBase === null || newBase.trim() === "") return;
+  let curMonthDefault = m.baseDate ? m.baseDate.slice(0,7) : currentMonthStr(); // YYYY-MM
+  let newMonth = prompt("بیس ریڈنگ کس مہینے کی ہے؟ (فارمیٹ: YYYY-MM، مثلاً 2026-08)\n\n⚠️ نوٹ: تاریخ ہمیشہ خودکار طور پر اُس مہینے کی یکم (1st) لی جائے گی — اِسے تبدیل نہیں کیا جا سکتا، کیونکہ بل اور ٹرینڈ ہمیشہ پورے مہینے کے حساب سے بنتے ہیں:", curMonthDefault);
+  if(newMonth === null || newMonth.trim() === "") return;
+  let forcedDate = forceFirstOfMonth(newMonth.trim() + "-01");
+  if(!forcedDate){ alert("تاریخ/مہینہ درست فارمیٹ میں نہیں ہے۔"); return; }
+  let newBaseVal = parseFloat(newBase)||0;
+  let valueChanged = newBaseVal !== (m.base||0);
+  if(valueChanged){
+    if(!confirm("بیس ریڈنگ کی ویلیو بدلنے سے اس میٹر کی موجودہ ریڈنگ ہسٹری (ٹیبل) صاف ہو جائے گی۔ جاری رکھیں؟")) return;
+    m.history = [];
+    m.notified = {warned:false, over:false};
+  }
+  m.base = newBaseVal;
+  m.baseDate = forcedDate; // guaranteed 1st of the chosen month
+  save(); checkAlerts(i); render();
+  showToast(`✅ بیس ریڈنگ اپڈیٹ ہو گئی۔ Base Date = ${forcedDate} (مہینے کی یکم)`);
+}
+function editName(i){
+  let newName = prompt("Enter new Meter Name:", meters[i].name);
+  if(newName !== null && newName.trim() !== ""){ meters[i].name = newName.trim(); save(); render(); }
+}
+function editMeter(i){
+  let newMeter = prompt("Enter new Meter No:", meters[i].meter);
+  if(newMeter !== null){ meters[i].meter = newMeter.trim(); save(); render(); }
+}
+function editRef(i){
+  let newRef = prompt("Enter new Reference No:", meters[i].ref);
+  if(newRef !== null){ meters[i].ref = newRef.trim(); save(); render(); }
+}
+function editRate(i){
+  let newRate = prompt("Enter Price per Unit (Rs):", meters[i].rate||0);
+  if(newRate !== null && newRate.trim() !== ""){ meters[i].rate = parseFloat(newRate)||0; save(); renderStats(i); render(); }
+}
+function editQuota(i){
+  let newQuota = prompt("Monthly Quota / Limit (units):", meters[i].quota||200);
+  if(newQuota !== null && newQuota.trim() !== ""){
+    meters[i].quota = parseFloat(newQuota)||200;
+    meters[i].notified = {warned:false, over:false};
+    save(); checkAlerts(i); renderStats(i); render();
+  }
+}
+function editReminder(i){
+  let cur = (meters[i].reminderAt !== undefined && meters[i].reminderAt !== null) ? meters[i].reminderAt : 50;
+  let newVal = prompt("Alert kab miley (kitne units baaqi rehne par)?", cur);
+  if(newVal !== null && newVal.trim() !== ""){
+    meters[i].reminderAt = parseFloat(newVal)||0;
+    meters[i].notified = {warned:false, over:false};
+    save(); checkAlerts(i); renderStats(i); render();
+  }
+}
+
+function computeMeterState(m){
+  let used = (m.current||0) - (m.base||0);
+  let quota = m.quota || 200;
+  let reminderAt = (m.reminderAt !== undefined && m.reminderAt !== null) ? m.reminderAt : 50;
+  let over = used > quota;
+  let remain = over ? (used - quota) : (quota - used);
+  let warn = !over && (quota - used) <= reminderAt;
+  let bill = Math.max(used,0) * (m.rate||0);
+  let pct = quota > 0 ? Math.min(100, Math.round((used/quota)*100)) : 0;
+
+  // ---- Trend Analysis (based on per-day usage since base reading) ----
+  // FIX: days are counted from the 1st of the cycle up to the date of the LATEST
+  // reading (inclusive), e.g. 1st → 5th = 5 days. 20 units in 5 days = 4.0/day,
+  // month-end ≈ 4.0 × 31 = 124 units (not 0.6/day & 20 units as before).
+  let baseDate = m.baseDate ? parseLocalDate(m.baseDate) : new Date();
+  let hist = (m.history||[]).filter(h=>h && h.ts);
+  let lastTs = hist.length ? Math.max.apply(null, hist.map(h=>h.ts)) : Date.now();
+  let daysInMonth = new Date(baseDate.getFullYear(), baseDate.getMonth()+1, 0).getDate();
+  let daysElapsed = Math.min(daysInMonth, Math.max(1, dayIndex(lastTs) - dayIndex(baseDate) + 1));
+  let perDay = used > 0 ? (used / daysElapsed) : 0;
+  let projUnits = Math.round(perDay * daysInMonth);
+  let projBill = projUnits * (m.rate||0);
+  let projOver = projUnits > quota;
+
+  return {used, quota, reminderAt, over, warn, remain, bill, pct,
+    perDay, daysElapsed, daysInMonth, projUnits, projBill, projOver};
+}
+
+function posterReadingsTableHtml(m){
+  let hist = m.history || [];
+  if(hist.length === 0) return "";
+  let base = m.base||0;
+  let baseTs = m.baseDate ? parseLocalDate(m.baseDate).getTime() : (hist[0].ts || Date.now());
+  let prevReading = base, prevTs = baseTs;
+  let rows = hist.map(h=>{
+    let ts = h.ts || Date.parse(h.date) || prevTs;
+    let unitsInc = Math.max((h.reading||0) - prevReading, 0);
+    let daysGap = Math.max(1, dayIndex(ts) - dayIndex(prevTs) + (prevTs === baseTs ? 1 : 0));
+    let perDay = unitsInc / daysGap;
+    let billInc = unitsInc * (m.rate||0);
+    let rowHtml = `<tr><td>${h.date}</td><td>${h.reading}</td><td>${unitsInc}</td><td>${perDay.toFixed(1)}</td><td>Rs ${billInc.toLocaleString(undefined,{maximumFractionDigits:0})}</td></tr>`;
+    prevReading = h.reading||0; prevTs = ts;
+    return rowHtml;
+  }).join("");
+  return `
+    <div class="poster-readings-title">📊 مکمل ریڈنگ چارٹ (All Readings This Cycle)</div>
+    <div class="poster-readings-wrap">
+      <table class="poster-readings-table">
+        <thead><tr><th>تاریخ</th><th>ریڈنگ</th><th>یونٹس</th><th>روزانہ</th><th>بل</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function posterRecordsHtml(m){
+  let recs = m.records || [];
+  if(recs.length === 0) return "";
+  let rows = recs.slice().reverse().map(r =>
+    `<div class="poster-records-row"><span>${r.label} (${r.base}→${r.current})</span><span>Rs ${Number(r.bill).toLocaleString(undefined,{maximumFractionDigits:0})}</span></div>`
+  ).join("");
+  return `<div class="poster-readings-title">🗓️ پچھلے بند شدہ مہینے (Previous Closed Cycles)</div>${rows}`;
+}
+
+function toggleSettings(i){
+  let body = document.getElementById("settingsBody_"+i);
+  let chevron = document.getElementById("settingsChevron_"+i);
+  if(body) body.classList.toggle("open");
+  if(chevron) chevron.classList.toggle("open");
+}
+
+function renderTrend(i){
+  let m = meters[i];
+  let s = computeMeterState(m);
+  let el = document.getElementById("reftrend_"+i);
+  if(!el) return;
+  let overCls = s.projOver ? "over" : "";
+  el.innerHTML = `
+    <div class="ref-trend-panel ${overCls}">
+      <div class="trend-chip"><div class="tc-label">📊 Daily Trend</div><div class="tc-value">${s.perDay.toFixed(1)} u/day</div></div>
+      <div class="trend-chip"><div class="tc-label">📅 Month-End Approx</div><div class="tc-value">${s.projUnits} units</div></div>
+      <div class="trend-chip tc-span2"><div class="tc-label">💰 Approx Bill (Month End)</div><div class="tc-value">Rs ${s.projBill.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div>
+    </div>
+  `;
+}
+
+function updateRowBadges(i){
+  let m = meters[i];
+  let s = computeMeterState(m);
+  let quotaBadge = document.getElementById("refquota_"+i);
+  if(quotaBadge) quotaBadge.textContent = s.quota;
+  let usedBadge = document.getElementById("refused_"+i);
+  if(usedBadge) usedBadge.textContent = s.used;
+  let remainBadge = document.getElementById("refremain_"+i);
+  if(remainBadge) remainBadge.textContent = s.remain;
+  let remainLabel = document.getElementById("refremainLabel_"+i);
+  if(remainLabel) remainLabel.textContent = s.over ? '🚨 Over' : (s.warn ? '⚠️ Remain' : '🔋 Remain');
+  let remainWrap = document.getElementById("refremainWrap_"+i);
+  if(remainWrap){
+    remainWrap.classList.remove("ms-remain","ms-warn","ms-over");
+    remainWrap.classList.add(s.over ? "ms-over" : (s.warn ? "ms-warn" : "ms-remain"));
+  }
+  let billWrap = document.getElementById("refbillWrap_"+i);
+  let billBadge = document.getElementById("refbill_"+i);
+  if(billWrap && billBadge){
+    if(m.rate){ billWrap.style.display = ""; billBadge.textContent = `Rs ${s.bill.toLocaleString(undefined,{maximumFractionDigits:0})}`; }
+    else { billWrap.style.display = "none"; }
+  }
+  let icon = document.getElementById("refIcon_"+i);
+  if(icon){ icon.classList.toggle("icon-warn", s.warn && !s.over); icon.classList.toggle("icon-over", s.over); }
+}
+
+function renderStats(i){
+  let m = meters[i];
+  let s = computeMeterState(m);
+  let el = document.getElementById("stats_"+i);
+  if(el) el.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-box stat-used"><div class="label">⚡ Used</div><div class="value">${s.used}</div></div>
+      <div class="stat-box ${s.over ? 'stat-over' : (s.warn ? 'stat-warn' : 'stat-remain')}">
+        <div class="label">${s.over ? '🚨 Over Used' : (s.warn ? '⚠️ Remaining' : '🔋 Remaining')}</div>
+        <div class="value">${s.remain}</div>
+      </div>
+      <div class="stat-box stat-bill">
+        <div class="label">💰 Estimated Bill${m.rate ? ' (Rs '+m.rate+'/unit)' : ''}</div>
+        <div class="value">Rs ${s.bill.toLocaleString(undefined,{maximumFractionDigits:2})}</div>
+      </div>
+    </div>
+    <div class="quota-bar-wrap"><div class="quota-bar-fill ${s.over?'over':(s.warn?'warn':'')}" style="width:${s.pct}%"></div></div>
+    <div class="quota-bar-label">${s.used} / ${s.quota} units (quota)</div>
+    ${s.over
+      ? `<div class="status-over">⚠️ OVER LIMIT by ${s.remain} units!</div>`
+      : (s.warn ? `<div class="status-warn">🔔 Sirf ${s.remain} units baaqi hain — alert threshold: ${s.reminderAt}</div>`
+      : `<div class="status-ok">✅ Within Limit — OK</div>`)}
+  `;
+  updateRowBadges(i);
+  renderTrend(i);
+}
+
+// ---------- Poster-style single meter report ----------
+function generateReport(i){
+  let m = meters[i];
+  let s = computeMeterState(m);
+  let dateStr = new Date().toLocaleString();
+
+  let card = document.getElementById("reportCard");
+  card.dataset.index = i;
+  card.className = "poster-frame printable-area";
+  let picker = document.querySelector("#reportOverlay .poster-theme-picker");
+  if(picker) picker.querySelectorAll(".poster-theme-dot").forEach(d=>d.classList.toggle("active", d.classList.contains("pt-colorful")));
+  let sizePicker = document.querySelector("#reportOverlay .poster-size-picker");
+  if(sizePicker) sizePicker.querySelectorAll(".poster-size-btn").forEach((b,idx)=>b.classList.toggle("active", idx===0));
+  posterSizeChoice.reportCard = "classic";
+  card.innerHTML = `
+    <div class="poster-card">
+      <div class="poster-deco-1"></div>
+      <div class="poster-deco-2"></div>
+      <div class="poster-ribbon">⚡ ELECTRICITY BILL</div>
+      <div class="poster-head">
+        <div class="poster-icon-circle">📄</div>
+        <div class="poster-title">${m.name || 'Meter'}</div>
+        <div class="poster-sub">${m.ref ? 'Ref: '+m.ref+' · ' : ''}${dateStr}</div>
+      </div>
+      <div class="poster-stats-grid">
+        <div class="poster-stat c-purple"><div class="ps-label">BASE READING</div><div class="ps-value">${m.base||0}</div></div>
+        <div class="poster-stat c-pink"><div class="ps-label">CURRENT READING</div><div class="ps-value">${m.current||0}</div></div>
+        <div class="poster-stat c-teal"><div class="ps-label">UNITS USED</div><div class="ps-value">${s.used}</div></div>
+        <div class="poster-stat ${s.over ? 'c-red' : 'c-amber'}"><div class="ps-label">${s.over ? 'OVER LIMIT' : 'REMAINING'}</div><div class="ps-value">${s.remain}</div></div>
+      </div>
+      <div class="poster-rate-row">Rate: Rs ${m.rate||0} / unit &nbsp;•&nbsp; 🎯 Quota: ${s.quota} units</div>
+      <div class="poster-stats-grid">
+        <div class="poster-stat c-purple"><div class="ps-label">TREND — UNITS/DAY</div><div class="ps-value">${s.perDay.toFixed(1)}</div></div>
+        <div class="poster-stat ${s.projOver ? 'c-red' : 'c-teal'}"><div class="ps-label">APPROX UNITS (MONTH END)</div><div class="ps-value">${s.projUnits}</div></div>
+      </div>
+      <div class="poster-total-banner">
+        <div class="ptb-label">TOTAL ESTIMATED BILL</div>
+        <div class="ptb-value">Rs ${s.bill.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+      </div>
+      <div class="poster-rate-row">📈 Trend Projected Bill (Month End): Rs ${s.projBill.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+      ${posterReadingsTableHtml(m)}
+      ${posterRecordsHtml(m)}
+      <div class="poster-footer">⚡ Multi Meter Tracker &nbsp;|&nbsp; Generated ${new Date().toLocaleDateString()}</div>
+    </div>
+    <div class="report-actions">
+      <button class="btn-close-x" onclick="closeReport()">✕ Close</button>
+      <button class="btn-img" onclick="shareReportImage(${i})">🖼️ Share Image (WhatsApp)</button>
+      <button class="btn-wa" onclick="shareReportWhatsApp(${i})">📱 Text Summary</button>
+      <button class="btn-pdf" onclick="downloadReportPDF(${i})">📕 PDF</button>
+      <button class="btn-print" onclick="printReport()">🖨️ Print</button>
+    </div>
+  `;
+  document.getElementById("reportOverlay").classList.add("open");
+}
+
+function setPosterTheme(cardId, theme, dotEl){
+  let card = document.getElementById(cardId);
+  if(!card) return;
+  card.classList.remove("theme-light", "theme-mono", "theme-ocean", "theme-emerald");
+  if(theme !== "colorful") card.classList.add("theme-"+theme);
+  if(dotEl && dotEl.parentElement){
+    dotEl.parentElement.querySelectorAll(".poster-theme-dot").forEach(d=>d.classList.remove("active"));
+    dotEl.classList.add("active");
+  }
+}
+
+function closeReport(){ document.getElementById("reportOverlay").classList.remove("open"); }
+
+function reportSummaryText(i){
+  let m = meters[i];
+  let s = computeMeterState(m);
+  return `⚡ ${m.name} — Bill Report\n`+
+    (m.ref ? `Ref: ${m.ref}\n` : ``) +
+    `Base: ${m.base||0}  |  Current: ${m.current||0}\n`+
+    `Units Used: ${s.used}  |  Quota: ${s.quota}\n`+
+    `${s.over ? 'Over Limit by' : 'Remaining'}: ${s.remain} units\n`+
+    `Rate: Rs ${m.rate||0}/unit\n`+
+    `💰 Estimated Bill: Rs ${s.bill.toLocaleString(undefined,{maximumFractionDigits:0})}\n`+
+    `📅 ${new Date().toLocaleDateString()}`;
+}
+
+function shareReportWhatsApp(i){
+  let text = reportSummaryText(i);
+  if(navigator.share){ navigator.share({title:"Meter Bill Report", text:text}).catch(()=>{}); }
+  else { window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank"); }
+}
+
+function printReport(){ window.print(); }
+
+function renderCardToCanvasAndThen(cardEl, extraCss, callback){
+  // Primary method: html2canvas — renders the real DOM directly, works reliably
+  // across Chrome/WebView/Android, unlike the old SVG+foreignObject trick which
+  // silently failed on many devices ("Poster image nahi ban saka").
+  if(typeof html2canvas === "function"){
+    let actionsEl = cardEl.querySelector(".report-actions");
+    let prevDisplay = actionsEl ? actionsEl.style.display : null;
+    if(actionsEl) actionsEl.style.display = "none"; // don't capture the buttons themselves
+    html2canvas(cardEl, {
+      backgroundColor: null,
+      scale: 2,               // sharper output for sharing/printing
+      useCORS: true,
+      logging: false
+    }).then(function(canvas){
+      if(actionsEl) actionsEl.style.display = prevDisplay;
+      callback(canvas, canvas.width, canvas.height);
+    }).catch(function(err){
+      if(actionsEl) actionsEl.style.display = prevDisplay;
+      console.warn("html2canvas failed, falling back to SVG method:", err);
+      renderCardToCanvasSVGFallback(cardEl, extraCss, callback);
+    });
+    return;
+  }
+  // Fallback if the html2canvas script failed to load (e.g. no internet)
+  renderCardToCanvasSVGFallback(cardEl, extraCss, callback);
+}
+
+function renderCardToCanvasSVGFallback(cardEl, extraCss, callback){
+  let rect = cardEl.getBoundingClientRect();
+  let w = Math.ceil(rect.width);
+  let h = Math.ceil(rect.height);
+  let cardClone = cardEl.cloneNode(true);
+  let actionsEl = cardClone.querySelector(".report-actions");
+  if(actionsEl) actionsEl.remove();
+  let xhtml = `<div xmlns="http://www.w3.org/1999/xhtml"><style>${extraCss}</style>${cardClone.outerHTML}</div>`;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%">${xhtml}</foreignObject></svg>`;
+  let svgUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  let img = new Image();
+  img.onload = function(){
+    try{
+      let canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      let ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      callback(canvas, w, h);
+    }catch(e){ alert("Poster image nahi ban saka. (Internet connection check karein — poster banane ke liye ek chhoti si library load honi zaroori hai.)"); }
+  };
+  img.onerror = function(){ alert("Poster image nahi ban saka. (Internet connection check karein — poster banane ke liye ek chhoti si library load honi zaroori hai.)"); };
+  img.src = svgUrl;
+}
+
+// ---------- Poster size / aspect-ratio presets for social sharing ----------
+// classic = original auto-height poster (no letterboxing)
+// square  = 1:1  (Instagram/Facebook square post)
+// post    = 4:5  (Instagram portrait post)
+// story   = 9:16 (WhatsApp Status / Instagram-Facebook Story)
+const POSTER_SIZE_PRESETS = {
+  classic: null,
+  square:  {w:1080, h:1080, label:"⬛ Square"},
+  post:    {w:1080, h:1350, label:"🖼️ Post"},
+  story:   {w:1080, h:1920, label:"📱 Story"}
+};
+
+let posterSizeChoice = { reportCard: "classic", fullReportCard: "classic" };
+
+function setPosterSize(cardId, size, btnEl){
+  posterSizeChoice[cardId] = size;
+  if(btnEl && btnEl.parentElement){
+    btnEl.parentElement.querySelectorAll(".poster-size-btn").forEach(b=>b.classList.remove("active"));
+    btnEl.classList.add("active");
+  }
+}
+
+// Reads the poster-frame's current theme to build a matching gradient for
+// letterboxed backgrounds (so square/story exports don't have blank bars).
+function themeGradientColors(cardEl){
+  if(cardEl.classList.contains("theme-light")) return ["#ede9fe","#fce7f3","#fef3c7"];
+  if(cardEl.classList.contains("theme-mono"))  return ["#1c1917","#57534e","#57534e"];
+  if(cardEl.classList.contains("theme-ocean")) return ["#0c4a6e","#0891b2","#06b6d4"];
+  if(cardEl.classList.contains("theme-emerald")) return ["#064e3b","#059669","#a3e635"];
+  return ["#7c3aed","#ec4899","#f59e0b"]; // colorful (default)
+}
+
+// Places the rendered poster canvas onto a fixed-size canvas (e.g. 1080x1920
+// for a WhatsApp Story) without cropping any content — the poster is scaled
+// down to fit and centered, with the remaining space filled by a gradient
+// that matches the poster's own theme, so it looks intentional.
+function letterboxCanvas(sourceCanvas, preset, gradColors){
+  let out = document.createElement("canvas");
+  out.width = preset.w; out.height = preset.h;
+  let ctx = out.getContext("2d");
+  let grad = ctx.createLinearGradient(0, 0, preset.w, preset.h);
+  grad.addColorStop(0, gradColors[0]);
+  grad.addColorStop(0.5, gradColors[1]);
+  grad.addColorStop(1, gradColors[2]);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, preset.w, preset.h);
+  let pad = 0.94; // small margin so poster doesn't touch the edges
+  let scale = Math.min((preset.w*pad)/sourceCanvas.width, (preset.h*pad)/sourceCanvas.height);
+  let dw = sourceCanvas.width * scale;
+  let dh = sourceCanvas.height * scale;
+  let dx = (preset.w - dw) / 2;
+  let dy = (preset.h - dh) / 2;
+  ctx.drawImage(sourceCanvas, dx, dy, dw, dh);
+  return out;
+}
+
+function applyPosterSize(cardEl, canvas, cardId){
+  let sizeKey = posterSizeChoice[cardId] || "classic";
+  let preset = POSTER_SIZE_PRESETS[sizeKey];
+  if(!preset) return canvas; // classic = untouched
+  return letterboxCanvas(canvas, preset, themeGradientColors(cardEl));
+}
+
+const REPORT_EXPORT_CSS = `
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial Black', Arial, sans-serif; }
+  .poster-frame { background: linear-gradient(150deg, #7c3aed 0%, #ec4899 45%, #f59e0b 100%); border-radius: 28px; padding: 12px; width: 100%; height: 100%; }
+  .poster-card { background: linear-gradient(180deg, #fffaf3, #fff); border-radius: 22px; padding: 26px 22px 20px; position: relative; overflow: hidden; min-height: 620px; }
+  .poster-deco-1 { position: absolute; top: -40px; right: -40px; width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle, rgba(124,58,237,0.15), transparent 70%); }
+  .poster-deco-2 { position: absolute; bottom: -50px; left: -50px; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle, rgba(245,158,11,0.15), transparent 70%); }
+  .poster-ribbon { display: inline-block; background: linear-gradient(90deg, #7c3aed, #ec4899); color: #fff; font-size: 11px; letter-spacing: 1px; padding: 5px 14px; border-radius: 20px; position: relative; z-index: 1; }
+  .poster-head { text-align: center; margin: 14px 0 16px; position: relative; z-index: 1; }
+  .poster-icon-circle { width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 8px; background: linear-gradient(135deg, #7c3aed, #ec4899); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+  .poster-title { color: #1c1917; font-size: 19px; }
+  .poster-sub { color: #78716c; font-size: 11px; margin-top: 3px; font-family: Arial, sans-serif; font-weight: normal; }
+  .poster-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; position: relative; z-index: 1; }
+  .poster-stat { border-radius: 14px; padding: 12px 10px; text-align: center; color: #fff; }
+  .poster-stat.c-purple { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+  .poster-stat.c-pink { background: linear-gradient(135deg, #db2777, #ec4899); }
+  .poster-stat.c-teal { background: linear-gradient(135deg, #0891b2, #06b6d4); }
+  .poster-stat.c-amber { background: linear-gradient(135deg, #d97706, #f59e0b); }
+  .poster-stat.c-red { background: linear-gradient(135deg, #be123c, #e11d48); }
+  .ps-label { font-size: 9.5px; letter-spacing: 0.5px; opacity: 0.9; }
+  .ps-value { font-size: 19px; margin-top: 3px; }
+  .poster-rate-row { text-align: center; font-size: 11px; color: #78716c; margin: 8px 0 4px; position: relative; z-index: 1; font-family: Arial, sans-serif; font-weight: normal; }
+  .poster-total-banner { margin-top: 12px; border-radius: 16px; padding: 16px; background: linear-gradient(90deg, #7c3aed, #ec4899, #f59e0b); text-align: center; position: relative; z-index: 1; }
+  .ptb-label { color: #fff; font-size: 11px; letter-spacing: 1px; opacity: 0.95; }
+  .ptb-value { color: #fff; font-size: 30px; margin-top: 4px; }
+  .poster-footer { text-align: center; margin-top: 14px; font-size: 10px; color: #a8a29e; position: relative; z-index: 1; font-family: Arial, sans-serif; font-weight: normal; }
+  .full-poster-list { position: relative; z-index: 1; margin-top: 6px; }
+  .full-meter-block { padding: 12px 14px; border-radius: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; color: #fff; }
+  .full-meter-name { font-size: 13px; }
+  .full-meter-sub { font-size: 9.5px; opacity: 0.9; margin-top: 2px; font-family: Arial, sans-serif; font-weight: normal; }
+  .full-meter-bill { font-size: 14px; text-align: right; }
+
+  .poster-frame.theme-light { background: linear-gradient(150deg, #ede9fe 0%, #fce7f3 50%, #fef3c7 100%); }
+  .poster-frame.theme-light .poster-stat { background: rgba(124,58,237,0.10) !important; color: #3b0764 !important; }
+  .poster-frame.theme-light .poster-total-banner { background: linear-gradient(90deg, #ddd6fe, #fbcfe8) !important; }
+  .poster-frame.theme-light .ptb-label, .poster-frame.theme-light .ptb-value { color: #3b0764 !important; }
+  .poster-frame.theme-light .poster-ribbon { background: linear-gradient(90deg, #a78bfa, #f0abfc) !important; color: #3b0764 !important; }
+
+  .poster-frame.theme-mono { background: linear-gradient(150deg, #1c1917 0%, #57534e 100%); }
+  .poster-frame.theme-mono .poster-card { background: linear-gradient(180deg, #fafaf9, #fff) !important; }
+  .poster-frame.theme-mono .poster-stat { background: #292524 !important; color: #fff !important; }
+  .poster-frame.theme-mono .poster-total-banner { background: linear-gradient(90deg, #1c1917, #44403c) !important; }
+  .poster-frame.theme-mono .poster-ribbon { background: #1c1917 !important; }
+  .poster-frame.theme-mono .poster-icon-circle { background: linear-gradient(135deg, #1c1917, #57534e) !important; }
+  .poster-frame.theme-mono .full-meter-block { background: #292524 !important; }
+
+  .poster-frame.theme-ocean { background: linear-gradient(150deg, #0c4a6e 0%, #0891b2 60%, #06b6d4 100%); }
+  .poster-frame.theme-ocean .poster-stat { background: linear-gradient(135deg,#0369a1,#0891b2) !important; }
+  .poster-frame.theme-ocean .poster-total-banner { background: linear-gradient(90deg, #0c4a6e, #0891b2, #06b6d4) !important; }
+  .poster-frame.theme-ocean .poster-ribbon { background: linear-gradient(90deg,#0c4a6e,#0891b2) !important; }
+  .poster-frame.theme-ocean .poster-icon-circle { background: linear-gradient(135deg,#0c4a6e,#0891b2) !important; }
+  .poster-frame.theme-ocean .full-meter-block { background: linear-gradient(135deg,#0369a1,#0891b2) !important; }
+
+  .poster-frame.theme-emerald { background: linear-gradient(150deg, #064e3b 0%, #059669 55%, #a3e635 100%); }
+  .poster-frame.theme-emerald .poster-stat { background: linear-gradient(135deg,#047857,#059669) !important; }
+  .poster-frame.theme-emerald .poster-total-banner { background: linear-gradient(90deg, #064e3b, #059669, #a3e635) !important; }
+  .poster-frame.theme-emerald .poster-ribbon { background: linear-gradient(90deg,#064e3b,#059669) !important; }
+  .poster-frame.theme-emerald .poster-icon-circle { background: linear-gradient(135deg,#064e3b,#059669) !important; }
+  .poster-frame.theme-emerald .full-meter-block { background: linear-gradient(135deg,#047857,#059669) !important; }
+  .poster-frame.theme-emerald .poster-readings-table th { background: linear-gradient(90deg,#047857,#059669) !important; }
+
+  .poster-readings-wrap { position: relative; z-index: 1; margin: 14px 0 4px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(0,0,0,0.08); }
+  .poster-readings-title { font-size: 12px; color: #57534e; margin: 12px 0 6px; position: relative; z-index: 1; font-family: Arial, sans-serif; font-weight: bold; }
+  .poster-readings-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  .poster-readings-table th { background: linear-gradient(90deg, #7c3aed, #ec4899); color: #fff; padding: 7px 4px; font-size: 9.5px; text-align: center; font-family: Arial, sans-serif; }
+  .poster-readings-table td { padding: 6px 4px; text-align: center; color: #292524; border-bottom: 1px solid rgba(0,0,0,0.06); background: rgba(255,255,255,0.6); font-family: Arial, sans-serif; }
+  .poster-readings-table tbody tr:last-child td { border-bottom: none; }
+  .poster-records-row { display: flex; justify-content: space-between; font-size: 10.5px; color: #57534e; padding: 6px 10px; background: rgba(255,255,255,0.5); border-radius: 8px; margin-top: 5px; font-family: Arial, sans-serif; position: relative; z-index: 1; }
+`;
+
+function shareCanvasAsImage(canvas, filename){
+  canvas.toBlob(async function(blob){
+    if(!blob){ alert("Image nahi ban saka."); return; }
+    let file = new File([blob], filename, {type:"image/png"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({files:[file], title:"Meter Bill Poster"});
+        return;
+      }catch(e){ /* user cancelled or share failed — fall through to download */ }
+    }
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    showToast("🖼️ Poster image save ho gayi — ab WhatsApp mein attach karke bhej dein.");
+  }, "image/png", 0.95);
+}
+
+function shareReportImage(i){
+  let m = meters[i];
+  let card = document.getElementById("reportCard");
+  if(!card){ alert("Report nahi mila."); return; }
+  renderCardToCanvasAndThen(card, REPORT_EXPORT_CSS, function(canvas){
+    let finalCanvas = applyPosterSize(card, canvas, "reportCard");
+    shareCanvasAsImage(finalCanvas, (m.name||"meter").replace(/[^a-z0-9]+/gi,"_") + "_bill_poster.png");
+  });
+}
+
+function shareFullReportImage(){
+  let card = document.getElementById("fullReportCard");
+  if(!card){ alert("Report nahi mila."); return; }
+  renderCardToCanvasAndThen(card, REPORT_EXPORT_CSS, function(canvas){
+    let finalCanvas = applyPosterSize(card, canvas, "fullReportCard");
+    shareCanvasAsImage(finalCanvas, "all_meters_bill_poster.png");
+  });
+}
+
+function downloadReportPDF(i){
+  let m = meters[i];
+  let card = document.getElementById("reportCard");
+  if(!card){ alert("Report nahi mila."); return; }
+  renderCardToCanvasAndThen(card, REPORT_EXPORT_CSS, function(canvas){
+    let finalCanvas = applyPosterSize(card, canvas, "reportCard");
+    try{
+      let { jsPDF } = window.jspdf;
+      let w = finalCanvas.width, h = finalCanvas.height;
+      let orientation = w >= h ? "l" : "p";
+      let pdf = new jsPDF({orientation, unit:"px", format:[w,h]});
+      let imgData = finalCanvas.toDataURL("image/jpeg", 0.95);
+      pdf.addImage(imgData, "JPEG", 0, 0, w, h);
+      pdf.save((m.name||"meter").replace(/[^a-z0-9]+/gi,"_") + "_bill.pdf");
+    }catch(e){ alert("PDF nahi ban saka: " + e.message); }
+  });
+}
+
+// ---------- Poster-style full combined report ----------
+function openFullReport(){
+  // Agar sirf 1 hi meter hai, to ye "All Meters" wala generic poster nahi banega —
+  // seedha usi meter ka pura detailed report (naam ke title ke saath) khulega.
+  if(meters.length === 1){ generateReport(0); return; }
+
+  let dateStr = new Date().toLocaleString();
+  let grandTotal = 0;
+  let blocks = meters.map(m=>{
+    let s = computeMeterState(m);
+    grandTotal += s.bill;
+    return `
+      <div class="full-meter-block">
+        <div>
+          <div class="full-meter-name">${m.name}</div>
+          <div class="full-meter-sub">${m.ref?('Ref: '+m.ref+' · '):''}${s.used}/${s.quota} units ${s.over?('⚠️ over by '+s.remain):''} · Rs${m.rate||0}/unit</div>
+          <div class="full-meter-sub">📊 Trend: ${s.perDay.toFixed(1)} u/day · Month-end ≈ ${s.projUnits}u ≈ Rs ${s.projBill.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+        </div>
+        <div class="full-meter-bill">Rs ${s.bill.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+      </div>
+    `;
+  }).join("");
+  if(meters.length === 0){ blocks = `<div class="history-empty" style="position:relative;z-index:1;">Koi meter add nahi hua abhi</div>`; }
+
+  let card = document.getElementById("fullReportCard");
+  card.className = "poster-frame printable-area";
+  let picker = document.querySelector("#fullReportOverlay .poster-theme-picker");
+  if(picker) picker.querySelectorAll(".poster-theme-dot").forEach(d=>d.classList.toggle("active", d.classList.contains("pt-colorful")));
+  let sizePicker = document.querySelector("#fullReportOverlay .poster-size-picker");
+  if(sizePicker) sizePicker.querySelectorAll(".poster-size-btn").forEach((b,idx)=>b.classList.toggle("active", idx===0));
+  posterSizeChoice.fullReportCard = "classic";
+  card.innerHTML = `
+    <div class="poster-card">
+      <div class="poster-deco-1"></div>
+      <div class="poster-deco-2"></div>
+      <div class="poster-ribbon">📊 COMBINED BILL SUMMARY</div>
+      <div class="poster-head">
+        <div class="poster-icon-circle">📊</div>
+        <div class="poster-title">All Meters Report</div>
+        <div class="poster-sub">${dateStr}</div>
+      </div>
+      <div class="full-poster-list">${blocks}</div>
+      <div class="poster-total-banner">
+        <div class="ptb-label">💰 GRAND TOTAL</div>
+        <div class="ptb-value">Rs ${grandTotal.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+      </div>
+      <div class="poster-footer">⚡ Multi Meter Tracker &nbsp;|&nbsp; Generated ${new Date().toLocaleDateString()}</div>
+    </div>
+    <div class="report-actions">
+      <button class="btn-close-x" onclick="closeFullReport()">✕ Close</button>
+      <button class="btn-img" onclick="shareFullReportImage()">🖼️ Share Image (WhatsApp)</button>
+      <button class="btn-wa" onclick="shareFullReportWhatsApp()">📱 Text Summary</button>
+      <button class="btn-pdf" onclick="downloadFullReportPDF()">📕 PDF</button>
+      <button class="btn-print" onclick="printReport()">🖨️ Print</button>
+    </div>
+  `;
+  document.getElementById("fullReportOverlay").classList.add("open");
+}
+
+function closeFullReport(){ document.getElementById("fullReportOverlay").classList.remove("open"); }
+
+function fullReportSummaryText(){
+  let grandTotal = 0;
+  let lines = meters.map(m=>{
+    let s = computeMeterState(m);
+    grandTotal += s.bill;
+    return `• ${m.name}: ${s.used} units → Rs ${s.bill.toLocaleString(undefined,{maximumFractionDigits:0})}`;
+  });
+  return `📊 All Meters — Combined Bill\n${new Date().toLocaleDateString()}\n\n`+
+    lines.join("\n") + `\n\n💰 Grand Total: Rs ${grandTotal.toLocaleString(undefined,{maximumFractionDigits:0})}`;
+}
+
+function shareFullReportWhatsApp(){
+  let text = fullReportSummaryText();
+  if(navigator.share){ navigator.share({title:"Combined Meter Bill", text:text}).catch(()=>{}); }
+  else { window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank"); }
+}
+
+function downloadFullReportPDF(){
+  let card = document.getElementById("fullReportCard");
+  if(!card){ alert("Report nahi mila."); return; }
+  renderCardToCanvasAndThen(card, REPORT_EXPORT_CSS, function(canvas){
+    let finalCanvas = applyPosterSize(card, canvas, "fullReportCard");
+    try{
+      let { jsPDF } = window.jspdf;
+      let w = finalCanvas.width, h = finalCanvas.height;
+      let orientation = w >= h ? "l" : "p";
+      let pdf = new jsPDF({orientation, unit:"px", format:[w,h]});
+      let imgData = finalCanvas.toDataURL("image/jpeg", 0.95);
+      pdf.addImage(imgData, "JPEG", 0, 0, w, h);
+      pdf.save("all_meters_bill.pdf");
+    }catch(e){ alert("PDF nahi ban saka: " + e.message); }
+  });
+}
+
+function buildBackupFileName(){
+  const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  const WEEKDAYS = ["SU","MO","TU","WE","TH","FR","SA"];
+  let now = new Date();
+  let h24 = now.getHours();
+  let ampm = h24 >= 12 ? "PM" : "AM";
+  let h12 = h24 % 12; if(h12 === 0) h12 = 12;
+  let hh = String(h12).padStart(2,"0");
+  let mm = String(now.getMinutes()).padStart(2,"0");
+  return "BKMT" + now.getDate() + MONTHS[now.getMonth()] + WEEKDAYS[now.getDay()] + hh + mm + ampm + ".json";
+}
+
+function exportBackup(){
+  let blob = new Blob([JSON.stringify(meters, null, 2)], {type:"application/json"});
+  let url = URL.createObjectURL(blob);
+  let fname = buildBackupFileName();
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = fname;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  // Android/Chrome khud "Download complete" dikhata hai — is JS se ye band nahi ho sakta,
+  // is liye andar bhi ek apna status dikha dete hain taake pata chal jaye kaunsi file bani.
+  showToast("⬇️ محفوظ ہوگئی: " + fname + " (Downloads فولڈر میں)");
+}
+
+function importBackup(file){
+  if(!file) return;
+  let reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      let data = JSON.parse(e.target.result);
+      if(!Array.isArray(data)) throw new Error("Invalid backup file");
+      if(!confirm(`${data.length} meters mile is backup mein. Ye maujooda data ko replace kar dega. Continue karein?`)) return;
+      meters = data; save(); render();
+      showToast("✅ Backup restore ho gaya!");
+    }catch(err){ alert("Backup file load nahi ho saki: " + err.message); }
+  };
+  reader.readAsText(file);
+  document.getElementById("importFile").value = "";
+}
+
+function render(){
+  try{
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+  meters.forEach((m, i) => {
+    let s = computeMeterState(m);
+    let iconClass = s.over ? "icon-over" : (s.warn ? "icon-warn" : "");
+    list.innerHTML += `
+      <div class="ref-row" id="row_${i}">
+        <div class="ref-header" onclick="toggle(${i})">
+          <div class="ref-top">
+            <div class="ref-left">
+              <div class="ref-icon ${iconClass}" id="refIcon_${i}">🔌</div>
+              <div class="ref-info">
+                <div class="ref-label">Reference No</div>
+                <div class="ref-number"><span class="ref-name-inline">${m.name}</span>${m.ref || '—'}</div>
+              </div>
+            </div>
+            <span class="chevron">▼</span>
+          </div>
+          <div class="ref-badges-grid">
+            <div class="mini-stat"><div class="ms-label">🎯 Quota</div><div class="ms-value" id="refquota_${i}">${s.quota}</div></div>
+            <div class="mini-stat ms-used"><div class="ms-label">⚡ Used</div><div class="ms-value" id="refused_${i}">${s.used}</div></div>
+            <div class="mini-stat ${s.over ? 'ms-over' : (s.warn ? 'ms-warn' : 'ms-remain')}" id="refremainWrap_${i}">
+              <div class="ms-label" id="refremainLabel_${i}">${s.over ? '🚨 Over' : (s.warn ? '⚠️ Remain' : '🔋 Remain')}</div>
+              <div class="ms-value" id="refremain_${i}">${s.remain}</div>
+            </div>
+            <div class="mini-stat ms-bill" id="refbillWrap_${i}" style="${m.rate ? '' : 'display:none'}">
+              <div class="ms-label">💰 Bill</div>
+              <div class="ms-value" id="refbill_${i}">Rs ${s.bill.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ref-trend-row" id="reftrend_${i}"></div>
+
+        <div class="meter-detail">
+          <div class="meter-info">
+            <div class="info-item" onclick="editName(${i})">✏️ Meter Name<span>${m.name}</span></div>
+            <div class="info-item" onclick="editMeter(${i})">✏️ Meter No<span>${m.meter || '—'}</span></div>
+          </div>
+
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 10px;">📈 موجودہ ریڈنگ (Current Reading)</div>
+          <input type="number" id="curInput_${i}" placeholder="موجودہ ریڈنگ درج کریں" value="${m.current || ''}" oninput="update(${i}, this.value)">
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">🗓️ اس ریڈنگ کی تاریخ (کس دن کی ریڈنگ ہے)</div>
+          <input type="date" id="readingDate_${i}" value="${ymdLocal(new Date())}">
+          <label class="last-reading-chk"><input type="checkbox" id="lastReadingChk_${i}"> 🔒 یہ مہینے کی آخری ریڈنگ ہے (Last Reading of Month)</label>
+          <button class="btn-add" style="margin-top: 8px;" onclick="addReadingEntry(${i})">➕ ریڈنگ شامل کریں</button>
+
+          <div id="stats_${i}">
+            <div class="stats-row">
+              <div class="stat-box stat-used"><div class="label">⚡ Used</div><div class="value">${s.used}</div></div>
+              <div class="stat-box ${s.over ? 'stat-over' : (s.warn ? 'stat-warn' : 'stat-remain')}">
+                <div class="label">${s.over ? '🚨 Over Used' : (s.warn ? '⚠️ Remaining' : '🔋 Remaining')}</div>
+                <div class="value">${s.remain}</div>
+              </div>
+              <div class="stat-box stat-bill">
+                <div class="label">💰 Estimated Bill${m.rate ? ' (Rs '+m.rate+'/unit)' : ''}</div>
+                <div class="value">Rs ${s.bill.toLocaleString(undefined,{maximumFractionDigits:2})}</div>
+              </div>
+            </div>
+            <div class="quota-bar-wrap"><div class="quota-bar-fill ${s.over?'over':(s.warn?'warn':'')}" style="width:${s.pct}%"></div></div>
+            <div class="quota-bar-label">${s.used} / ${s.quota} units (quota)</div>
+            ${s.over
+              ? `<div class="status-over">⚠️ OVER LIMIT by ${s.remain} units!</div>`
+              : (s.warn ? `<div class="status-warn">🔔 Sirf ${s.remain} units baaqi hain — alert threshold: ${s.reminderAt}</div>`
+              : `<div class="status-ok">✅ Within Limit — OK</div>`)}
+          </div>
+
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 12px;">📊 Readings &amp; Bill Table (Is Mahine Ki)</div>
+          <div id="readingsTable_${i}"></div>
+
+          <button class="history-toggle" onclick="toggleRecords(${i})">📅 Monthly Records</button>
+          <div class="records-list" id="records_${i}"></div>
+
+          <button class="btn-cycle" onclick="closeMonth(${i})">🔒 Close Month & Start New Cycle</button>
+
+          <button class="btn-report" onclick="generateReport(${i})">📄 Generate Report</button>
+
+          <div class="settings-toggle" onclick="toggleSettings(${i})">
+            <span>⚙️ Settings</span>
+            <span class="settings-chevron" id="settingsChevron_${i}">▼</span>
+          </div>
+          <div class="settings-body" id="settingsBody_${i}">
+            <div class="meter-info">
+              <div class="info-item" onclick="editRef(${i})">✏️ Reference No<span>${m.ref || '—'}</span></div>
+              <div class="info-item" onclick="editRate(${i})">✏️ Price per Unit<span>Rs ${m.rate || 0}</span></div>
+              <div class="info-item">Base Reading<span>${m.base}</span></div>
+              <div class="info-item" onclick="editQuota(${i})">🎯 Monthly Quota<span>${s.quota} units</span></div>
+              <div class="info-item" onclick="editReminder(${i})">🔔 Alert at<span>${s.reminderAt} remaining</span></div>
+            </div>
+            <button class="btn-add" style="margin-top: 8px; padding: 10px; background: linear-gradient(90deg, #0891b2, #06b6d4); font-size: 13px;" onclick="editBase(${i})">✏️ Edit Base Reading</button>
+            <button class="btn-add" style="margin-top: 8px; padding: 10px; background: linear-gradient(90deg, #b91c1c, #ea580c); font-size: 13px;" onclick="resetMeterData(${i})">🧨 Reset / Zero All Data</button>
+          </div>
+
+          <button class="btn-delete" onclick="del(${i})">🗑️ Delete Meter</button>
+
+          <button class="btn-back" onclick="toggle(${i})">⬅ Back</button>
+        </div>
+      </div>
+    `;
+  });
+  meters.forEach((m, i) => { renderReadingsTable(i); renderRecords(i); renderTrend(i); });
+  if(openIndex !== null && meters[openIndex]){
+    let row = document.getElementById("row_"+openIndex);
+    if(row) row.classList.add("open");
+  } else { openIndex = null; }
+  }catch(err){
+    document.getElementById("list").innerHTML =
+      `<div style="background:rgba(220,38,38,0.12);border:1px solid #dc2626;color:#991b1b;padding:14px;border-radius:10px;margin-top:10px;font-size:12px;">
+        ⚠️ Something went wrong while showing your meters: ${(err&&err.message)||err}<br>Your saved data is safe — please share this message so it can be fixed.
+      </div>`;
+  }
+}
+
+window.addEventListener("error", function(e){
+  let list = document.getElementById("list");
+  if(list && !list.innerHTML.trim()){
+    list.innerHTML =
+      `<div style="background:rgba(220,38,38,0.12);border:1px solid #dc2626;color:#991b1b;padding:14px;border-radius:10px;margin-top:10px;font-size:12px;">
+        ⚠️ Something went wrong: ${e.message||e}<br>Your saved data is safe — please share this message so it can be fixed.
+      </div>`;
+  }
+});
+
+// Legacy meters with no recorded base date get the most sensible start point guessed
+// instead of defaulting to "today" (which would wrongly compress the whole month's
+// usage into 1 day and blow up the trend projection) — handled inside normalizeAndRenderAll().
+renderVersionBadge();
+normalizeAndRenderAll();
+if("serviceWorker" in navigator && location.protocol.indexOf("http") === 0){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+loadFromIDB();       // may swap in a more complete copy from IndexedDB, then re-render
+checkDailyBackup();  // takes today's noon backup if not already done
+setInterval(checkDailyBackup, 5*60*1000); // keep checking every 5 min in case app stays open past noon
+
+</script>
+</body>
+</html>
