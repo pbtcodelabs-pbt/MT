@@ -1,5 +1,5 @@
 // Multi Meter Tracker — Service Worker (MT510MO001)
-const CACHE = "mt510mo001-v1";
+const CACHE = "mt2310fr002-v1";
 const ASSETS = [
   "./", "./index.html", "./manifest.json",
   "./icons/icon-192.png", "./icons/icon-512.png",
@@ -11,7 +11,7 @@ self.addEventListener("install", e => {
   self.skipWaiting();
 });
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => /^mt\d+[a-z]{2}\d+-v\d+$/.test(k) && k !== CACHE) /* 🛡️ صرف MT کے اپنے پرانے کیش */.map(k => caches.delete(k)))));
   self.clients.claim();
 });
 // Network first (so updates arrive), cache fallback (so it works offline)
