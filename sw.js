@@ -1,5 +1,5 @@
 // Multi Meter Tracker — Service Worker (MT510MO001)
-const CACHE = "mt0211mo003-v1";
+const CACHE = "mt0211mo004-v1";
 const ASSETS = [
   "./", "./index.html", "./manifest.json",
   "./icons/icon-192.png", "./icons/icon-512.png",
