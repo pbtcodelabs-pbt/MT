@@ -16,6 +16,8 @@ self.addEventListener("activate", e => {
 });
 // Network first (so updates arrive), cache fallback (so it works offline)
 self.addEventListener("fetch", e => {
+  /* ہیلپ ڈیسک (#33): pbtcodelabs-pbt.github.io/help/ کی فائلیں (widget.js) کبھی کیش نہیں — ہر ایپ میں نیا بٹن فوراً */
+  try { const _hd = new URL(e.request.url); if (_hd.hostname === 'pbtcodelabs-pbt.github.io' && _hd.pathname.startsWith('/help/')) return; } catch (_e) {}
   if(e.request.method !== "GET") return;
   e.respondWith(
     fetch(e.request).then(res => {
